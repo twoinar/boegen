@@ -1599,6 +1599,18 @@ function krWertListeMitMittel(){
   if (gb && vw && gb.w !== vw.w) L.push({k:"mittel", n:"Mittelwert aus Grundbesitzwert und Verkehrswert", kurz:"Mittelwert aus Grundbesitzwert und Verkehrswert", w: Math.round((gb.w + vw.w) / 2)});
   return L;
 }
+/* Je Grundstück ein Wert (gewählte Wertart, sonst Verkehrswert) für „Grundstückswerte übernehmen“ im Rechner */
+function krGrundstuecke(){
+  const A = typeof bbMitErgebnis === "function" ? bbMitErgebnis() : [];
+  return A.map((a, i) => { const L = a.alleWerte ? a.alleWerte() : [], k = a.kopf ? a.kopf() : {};
+    const f = key => (L.find(y=>y.k===key) || {}).w, vw = f("vw") || (L[0] || {}).w || 0;
+    const w = krWertWahl === "mittel" && f("gbw") && vw ? Math.round((f("gbw") + vw) / 2) : (f(krWertWahl) || vw);
+    return {name: (k.anschrift || k.art || "Grundstück") + (A.length > 1 ? ` (Objekt ${i+1})` : ""), w}; }).filter(x => x.w > 0);
+}
+function krGrundstueckeSenden(ziel){
+  ziel = ziel || krFrame.contentWindow;
+  try{ if (ziel) ziel.postMessage({typ:"gnotkg-grundstuecke", liste: krGrundstuecke()}, KR_ORIGIN); }catch(e){}
+}
 function krWertGewaehlt(){
   const L = krWertListeMitMittel(), gew = L.find(x=>x.k===krWertWahl) || L.find(x=>x.k==="vw") || L[0];
   if (krWertHand != null) return {w: krWertHand, kurz: "Grundstückswert (von Hand angepasst)"};
@@ -1606,6 +1618,8 @@ function krWertGewaehlt(){
 }
 function krWertAuswahl(){
   const L = krWertListeMitMittel(), box = document.getElementById("krWert"), betrag = document.getElementById("krWertBetrag"); if (!box) return;
+  try{ if (krFrame.getAttribute("src")) krGrundstueckeSenden();
+       if (krFensterRef && !krFensterRef.closed) krGrundstueckeSenden(krFensterRef); }catch(e){}
   document.getElementById("krWertBox").hidden = !L.length;
   if (!L.length){ box.innerHTML = ""; return; }
   if (!L.some(x=>x.k===krWertWahl)) krWertWahl = (L.find(x=>x.k==="vw") || L[0]).k;
@@ -1736,6 +1750,7 @@ const KR_FELDER = ["reiter","titel","gw","netto","ust","durchlaufend","gesamt","
 window.addEventListener("message", e=>{
   const d = e.data;
   if (e.origin !== KR_ORIGIN || !d || (e.source !== krFrame.contentWindow && (!krFensterRef || e.source !== krFensterRef))) return;
+  if (d.typ === "gnotkg-grundstuecke-bitte"){ krGrundstueckeSenden(e.source); return; }
   if (d.typ === "gnotkg-kosten"){
     if (e.source === krFrame.contentWindow && KR_REITER.some(r=>r[0]===d.reiter) && krReiter.value !== d.reiter){
       krReiter.value = d.reiter; krReiterVonHand = true; krLaden(); return; }   // im Rechner anderen Reiter gewählt: mit Werten aus dem Bogen neu laden
