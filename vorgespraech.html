@@ -1571,7 +1571,7 @@ const krBereich = document.getElementById("krBereich"), krKasten = document.getE
 let krErgebnis = null, krReiterVonHand = false;
 krReiter.innerHTML = KR_REITER.map(([k,t])=>`<option value="${k}">${t}</option>`).join("");
 const krEur = n => (Math.round(n*100)/100).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
-const krKurz = e => `${krEur(e.gesamt)} brutto (${e.titel}, ${e.gw})`;
+const krKurz = e => `${krEur(e.gesamt)} brutto (${e.titel}, ${e.gw})` + (e.grundbuch ? `, dazu Grundbuch ${krEur(e.grundbuch)}` : "");
 function krVorschlag(){ const g = gegAuswahl().map(x=>KR_ZU[x]).filter(Boolean); return g[0] || "tabelle"; }
 /* Werte aus dem Bogen: Grundstückswert (Bedarfsbewertung), Vermögen, Nettoeinkommen, Auftraggeber */
 /* Alle Grundstückswerte aus der Bedarfsbewertung (alle Objekte zusammen) zur Auswahl */
@@ -1659,6 +1659,11 @@ function krVolltext(e){
     z.push(`Zwischensumme netto: ${krEur(e.netto)}`, `Umsatzsteuer 19 %: ${krEur(e.ust)}`);
     (e.durchlaufendePosten||[]).forEach(d=>z.push(`${d.txt}${d.sub ? " – "+d.sub : ""}: ${krEur(d.betrag)}`));
     z.push(`Gesamtbetrag: ${krEur(e.gesamt)}`);
+    if (Array.isArray(e.grundbuchPosten) && e.grundbuchPosten.length){
+      z.push("", "Grundbuchamt (Gerichtskosten, gesonderte Rechnung, ohne USt)");
+      e.grundbuchPosten.forEach(p=>z.push(`Nr. ${p.kv}  ${p.txt}${p.sub ? " – "+p.sub : ""}${p.wert!=null ? ` (${krSatz(p.satz)} aus ${krEur(p.wert)})` : ""}: ${krEur(p.betrag)}`));
+      z.push(`Grundbuchkosten: ${krEur(e.grundbuch||0)}`, `Notar und Grundbuch zusammen: ${krEur((e.gesamt||0)+(e.grundbuch||0))}`);
+    }
   } else z.push("", ...String(e.text||"").split("\n").slice(2));
   if ((e.hinweise||[]).length){ z.push("", "Hinweise"); e.hinweise.forEach(h=>z.push("• "+h)); }
   z.push("", "Überschlägige Berechnung nach GNotKG; maßgeblich ist die Kostenrechnung nach Beurkundung.");
@@ -1701,7 +1706,7 @@ gegChips.addEventListener("click", ()=>{
 });
 /* Rückmeldungen des Rechners: laufend den aktuellen Stand („gnotkg-kosten“), auf Knopfdruck
    „In den Vorgesprächsbogen übernehmen“ die ganze Berechnung („gnotkg-uebernahme“) */
-const KR_FELDER = ["reiter","titel","gw","netto","ust","durchlaufend","gesamt","text","herleitung","positionen","durchlaufendePosten","hinweise"];
+const KR_FELDER = ["reiter","titel","gw","netto","ust","durchlaufend","gesamt","grundbuch","text","herleitung","positionen","durchlaufendePosten","grundbuchPosten","hinweise"];
 window.addEventListener("message", e=>{
   const d = e.data;
   if (e.origin !== KR_ORIGIN || !d || (e.source !== krFrame.contentWindow && (!krFensterRef || e.source !== krFensterRef))) return;
@@ -1744,8 +1749,8 @@ async function kostenMitnehmen(doc){
   const zeilen = krVolltext(krErgebnis);
   zeilen.forEach((z, i) => {
     if (!z.trim()){ y -= LH*0.5; return; }
-    const titel = /^(Herleitung des Geschäftswerts|Gebühren und Auslagen|Hinweise)$/.test(z);
-    const fett = i < 2 || titel || /^(Gesamtbetrag|Zwischensumme)/.test(z), font = fett ? fB : fN, farbe = i === 0 || titel ? BLAU : TXT;
+    const titel = /^(Herleitung des Geschäftswerts|Gebühren und Auslagen|Hinweise|Grundbuchamt \(Gerichtskosten)/.test(z);
+    const fett = i < 2 || titel || /^(Gesamtbetrag|Zwischensumme|Grundbuchkosten|Notar und Grundbuch)/.test(z), font = fett ? fB : fN, farbe = i === 0 || titel ? BLAU : TXT;
     const einzug = /^\s+/.test(z) ? 14 : 0;
     for (const t of umbrechen(pdfText(z.trim()), font, GR)){ if (y < M + 10) neueSeite(); seite.drawText(t, {x:M+einzug, y, size:GR, font, color:farbe}); y -= LH; }
   });
