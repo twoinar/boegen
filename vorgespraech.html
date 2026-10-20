@@ -272,6 +272,21 @@ dialog.mail textarea{min-height:70px}
   .gw-block > h3{display:none}
   .gw-druck{display:block}
 }
+/* Einklappen: Eingaben ausblenden (bleiben erhalten), nur das Ergebnis wie im Ausdruck zeigen */
+.klapp{float:right;font-size:12px;font-weight:normal;padding:4px 10px;background:var(--field);color:var(--text);text-transform:none;letter-spacing:0}
+section.es-aus .klapp,section.gw-aus .klapp,section.kr-aus .klapp{display:none}
+section.eingeklappt .gw-wahl,section.eingeklappt .gw-teile,section.eingeklappt .gw-eingabe,section.eingeklappt .gw-block>h3,
+section.eingeklappt .bb-frame,section.eingeklappt .bb-reiter,
+section.eingeklappt .kr-wahl,section.eingeklappt .kr-leiste,section.eingeklappt .kr-werte,section.eingeklappt .kr-hinw,section.eingeklappt .kr-frame,section.eingeklappt .kr-live,
+section.es-bereich.eingeklappt > :not(h2):not(.es-druck){display:none!important}
+section.eingeklappt .gw-block{border:0;padding:0;margin-top:8px}
+section.eingeklappt .es-druck{display:block}
+section.gw-bereich.eingeklappt #gwInhalt{display:none!important}
+.klapp-info{display:none;font-size:13px;line-height:1.6;margin-top:8px}
+.klapp-info b{color:var(--blue)}
+section.eingeklappt .klapp-info{display:block}
+@media print{ .klapp-info{display:none!important} section.gw-bereich.eingeklappt #gwInhalt{display:block!important} }
+@media print{ .klapp{display:none!important} }
 /* ---------- Grundstückswert / Bedarfsbewertung ---------- */
 .bb-reiter{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
 .bb-reiter button{background:var(--field);color:var(--text);padding:6px 12px;font-size:12px}
@@ -1030,6 +1045,30 @@ document.getElementById("mailForm").addEventListener("submit", async ev=>{
 });
 
 /* ---------- Drucken ---------- */
+/* Knopf „Einklappen“ an Erbspiegel, Geschäftswert und Kostenberechnung */
+function gwKurz(){
+  const z = [], eur = gwEur;
+  if (gwBox.grund.checked){ const A = typeof bbMitErgebnis === "function" ? bbMitErgebnis() : [];
+    A.forEach((a, i) => { const w = a.werte(), k = a.kopf();
+      z.push(`<b>${gwEsc((A.length>1 ? `Objekt ${i+1}: ` : "") + (k.anschrift || k.art || "Grundstück"))}</b>: Grundbesitzwert ${w.gbw ? eur(w.gbw) : "–"}${w.vw ? " · Verkehrswert " + eur(w.vw) : ""}`); }); }
+  if (gwBox.verm.checked || gwBox.grund.checked){ const v = gwVermoegen();
+    if (v.A || v.V) z.push(`<b>Vermögen</b> ${eur(v.A)}, Verbindlichkeiten ${eur(v.V)}`);
+    v.gw.forEach(g => z.push(`<b>${gwEsc(g.t)}</b>: ${eur(g.w)}`)); }
+  if (gwBox.eink.checked){ const m = gwZahl(gwEinkM.value), f = gwZahl(gwEinkF.value);
+    if (m || f) z.push(`<b>Nettoeinkommen</b> Ehemann ${eur(m)}, Ehefrau ${eur(f)} monatlich`); }
+  return z.length ? z.join("<br>") : "Noch keine Werte.";
+}
+[["esBereich", ()=>erbspiegelDruckAktualisieren()], ["gwBereich", ()=>gwKurz()], ["krBereich", ()=>krErgebnis ? "" : gwEsc(krLive.textContent || "Noch keine Kostenberechnung in den Bogen übernommen.")]].forEach(([id, aktualisieren]) => {
+  const sec = document.getElementById(id), h = sec && sec.querySelector("h2"); if (!h) return;
+  let info = null;
+  if (id !== "esBereich"){ info = document.createElement("div"); info.className = "klapp-info"; h.after(info); }
+  const b = document.createElement("button"); b.type = "button"; b.className = "klapp"; b.textContent = "Einklappen";
+  b.title = "Eingaben ausblenden, nur das Ergebnis zeigen – die Werte bleiben erhalten";
+  b.onclick = () => { const zu = !sec.classList.contains("eingeklappt");
+    if (zu){ try{ const t = aktualisieren(); if (info) info.innerHTML = t; }catch(e){ if (info) info.textContent = ""; } }
+    sec.classList.toggle("eingeklappt", zu); b.textContent = zu ? "Aufklappen" : "Einklappen"; };
+  h.appendChild(b);
+});
 window.addEventListener("beforeprint", ()=>{ textfelderAnpassen(); erbspiegelDruckAktualisieren(); geschaeftswertDruck(); });
 
 document.getElementById("btnOrdner").onclick = ()=>{ if(!dateisystemOk){ meldung("Die Ordnerauswahl gibt es nur in Chrome und Edge.","err"); return;} ordnerWaehlen().then(()=>meldung(`Ablageordner „${ordner.name}“ gespeichert.`)).catch(fehler); };
