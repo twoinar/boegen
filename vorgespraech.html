@@ -302,6 +302,12 @@ dialog.mail textarea{min-height:70px}
 @media print{ .bb-frame,.bb-reiter{display:none!important} .bb-druck{display:block} }
 /* Kostenberechnung (GNotKG-Kostenrechner) */
 .kr-leiste{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.kr-werte{border:1px solid var(--line,#d5dbe3);border-radius:3px;margin:10px 0 0;padding:6px 10px 8px;font-size:13px}
+.kr-werte legend{font-weight:600;padding:0 4px}
+.kr-werte #krWert label{display:flex;gap:6px;align-items:baseline;margin:2px 0;cursor:pointer}
+.kr-werte #krWert .betrag{margin-left:auto;font-variant-numeric:tabular-nums}
+.kr-betrag{display:inline-block;margin-top:6px} .kr-werte small{margin-left:8px;color:var(--grau,#4a5568)}
+.kr-betrag input{font:inherit;background:var(--field);border:0;border-radius:2px;padding:5px 7px;text-align:right}
 .kr-leiste select{font:inherit;font-size:13px;color:var(--text);background:var(--field);border:0;border-radius:2px;padding:5px 7px}
 .kr-hinw{font-size:12px;color:var(--muted);margin:6px 0 0}
 .kr-frame{display:block;width:100%;height:900px;border:1px solid var(--line);border-radius:4px;margin-top:8px;background:#fff}
@@ -310,7 +316,7 @@ dialog.mail textarea{min-height:70px}
 .kr-live{font-size:12px;color:var(--muted);margin-top:4px}
 .kr-druck{display:none;font-size:11px;white-space:pre-wrap}
 @media print{ section.kr-aus{display:none!important} section.kr-bereich{break-before:page}
-  .kr-wahl,.kr-leiste,.kr-hinw,.kr-frame,.kr-erg{display:none!important} .kr-druck{display:block} }
+  .kr-wahl,.kr-leiste,.kr-werte,.kr-hinw,.kr-frame,.kr-erg{display:none!important} .kr-druck{display:block} }
 /* ---------- Erbspiegel (im Bogen) ---------- */
 .es-wahl{font-size:13px}
 .es-frame{display:block;width:100%;height:600px;border:1px solid var(--line);border-radius:4px;margin-top:8px;background:var(--sheet)}
@@ -448,10 +454,13 @@ dialog.mail textarea{min-height:70px}
     <div id="krInhalt" hidden>
       <div class="kr-leiste"><label for="krReiter">Berechnen für:</label><select id="krReiter"></select>
         <span id="krKpBox" hidden><label for="krKp">Kaufpreis:</label> <input type="text" class="zahl" id="krKp" inputmode="decimal" autocomplete="off" style="width:130px" placeholder="€"></span>
-        <span id="krWertBox" hidden><label for="krWert">Grundstückswert:</label> <select id="krWert"></select></span>
         <button type="button" id="krNeu">Werte aus dem Bogen übernehmen</button>
         <button type="button" id="krZeigen" hidden>Rechner anzeigen</button>
         <button type="button" id="krFenster">in neuem Fenster öffnen</button></div>
+      <fieldset class="kr-werte" id="krWertBox" hidden><legend>Grundstückswert für die Berechnung</legend>
+        <div id="krWert"></div>
+        <label class="kr-betrag">Wert: <input type="text" class="zahl" id="krWertBetrag" inputmode="decimal" autocomplete="off" style="width:130px"> €</label>
+        <small>Der Wert kann von Hand angepasst werden.</small></fieldset>
       <p class="kr-hinw" id="krHinw"></p>
       <iframe class="kr-frame" id="krFrame" title="GNotKG-Kostenrechner" hidden></iframe>
       <div class="kr-live" id="krLive"></div>
@@ -1575,7 +1584,7 @@ const krKurz = e => `${krEur(e.gesamt)} brutto (${e.titel}, ${e.gw})` + (e.grund
 function krVorschlag(){ const g = gegAuswahl().map(x=>KR_ZU[x]).filter(Boolean); return g[0] || "tabelle"; }
 /* Werte aus dem Bogen: Grundstückswert (Bedarfsbewertung), Vermögen, Nettoeinkommen, Auftraggeber */
 /* Alle Grundstückswerte aus der Bedarfsbewertung (alle Objekte zusammen) zur Auswahl */
-let krWertWahl = "";
+let krWertWahl = "", krWertHand = null;      // gewählter Wert; krWertHand: von Hand eingetragener Betrag
 function krWertListe(){
   const objs = typeof bbMitErgebnis === "function" ? bbMitErgebnis().map(a => a.alleWerte ? a.alleWerte() : []) : [];
   if (!objs.length) return [];
@@ -1585,17 +1594,30 @@ function krWertListe(){
       ersatz++; const vw = L.find(y=>y.k==="vw") || L[0]; return s + (vw ? vw.w : 0); }, 0);
     return {k, n: n + (ersatz ? ` (bei ${ersatz} Objekt${ersatz>1?"en":""} ersatzweise Verkehrswert)` : ""), kurz:n, w}; });
 }
+function krWertListeMitMittel(){
+  const L = krWertListe(), gb = L.find(x=>x.k==="gbw"), vw = L.find(x=>x.k==="vw");
+  if (gb && vw && gb.w !== vw.w) L.push({k:"mittel", n:"Mittelwert aus Grundbesitzwert und Verkehrswert", kurz:"Mittelwert aus Grundbesitzwert und Verkehrswert", w: Math.round((gb.w + vw.w) / 2)});
+  return L;
+}
+function krWertGewaehlt(){
+  const L = krWertListeMitMittel(), gew = L.find(x=>x.k===krWertWahl) || L.find(x=>x.k==="vw") || L[0];
+  if (krWertHand != null) return {w: krWertHand, kurz: "Grundstückswert (von Hand angepasst)"};
+  return gew ? {w: gew.w, kurz: gew.kurz} : null;
+}
 function krWertAuswahl(){
-  const L = krWertListe(), sel = document.getElementById("krWert"); if (!sel) return;
+  const L = krWertListeMitMittel(), box = document.getElementById("krWert"), betrag = document.getElementById("krWertBetrag"); if (!box) return;
   document.getElementById("krWertBox").hidden = !L.length;
-  if (!L.length){ sel.innerHTML = ""; return; }
+  if (!L.length){ box.innerHTML = ""; return; }
   if (!L.some(x=>x.k===krWertWahl)) krWertWahl = (L.find(x=>x.k==="vw") || L[0]).k;
-  const neu = L.map(x=>`<option value="${x.k}"${x.k===krWertWahl?" selected":""}>${gwEsc(x.n)}: ${krEur(x.w)}</option>`).join("");
-  if (sel.innerHTML !== neu) sel.innerHTML = neu;
+  const hand = krWertHand != null;
+  const neu = L.map(x=>`<label><input type="radio" name="krWert" value="${x.k}"${!hand && x.k===krWertWahl?" checked":""}><span>${gwEsc(x.n)}</span><span class="betrag">${krEur(x.w)}</span></label>`).join("")
+    + (hand ? `<label><input type="radio" name="krWert" value="hand" checked><span>von Hand angepasster Wert</span><span class="betrag">${krEur(krWertHand)}</span></label>` : "");
+  if (box.innerHTML !== neu) box.innerHTML = neu;
+  if (document.activeElement !== betrag) betrag.value = gwFmt(krWertGewaehlt().w);
 }
 function krParameter(reiter){
-  const L = krWertListe(), gew = L.find(x=>x.k===krWertWahl) || L.find(x=>x.k==="vw") || L[0];
-  const grund = gew ? gew.w : 0, grundText = gew ? gew.kurz + " lt. Bedarfsbewertung" : "";
+  const gew = krWertGewaehlt();
+  const grund = gew ? gew.w : 0, grundText = gew ? gew.kurz + (krWertHand != null ? "" : " lt. Bedarfsbewertung") : "";
   const v = gwKasten.checked && gwBox.verm.checked ? gwVermoegen() : null, A = v ? v.A : 0, V = v ? v.V : 0;
   const nm = gwKasten.checked && gwBox.eink.checked ? [gwZahl(gwEinkM.value), gwZahl(gwEinkF.value)] : [0,0];
   const zwei = !!ag2Feld.value.trim(), g = gegAuswahl(), p = {}, ueb = [], fehlt = [];
@@ -1680,7 +1702,7 @@ function kostenAn(laden){
 }
 function kostenAus(){
   krKasten.checked = false; krBereich.classList.add("kr-aus"); krInhalt.hidden = true;
-  krFrame.removeAttribute("src"); krRahmen(false); krLive.textContent = ""; document.getElementById("krKp").value = ""; krErgebnis = null; krReiterVonHand = false; krAnzeigen();
+  krFrame.removeAttribute("src"); krRahmen(false); krLive.textContent = ""; document.getElementById("krKp").value = ""; krErgebnis = null; krReiterVonHand = false; krWertHand = null; krAnzeigen();
 }
 krKasten.addEventListener("change", ()=>{
   if (krKasten.checked){ kostenAn(true); geaendert = true; return; }
@@ -1689,7 +1711,11 @@ krKasten.addEventListener("change", ()=>{
 });
 krReiter.addEventListener("change", ()=>{ krReiterVonHand = true; krLaden(); });
 document.getElementById("krNeu").onclick = krLaden;
-document.getElementById("krWert").addEventListener("change", e => { krWertWahl = e.target.value; geaendert = true; krLaden(); });
+document.getElementById("krWert").addEventListener("change", e => { if (e.target.value === "hand") return; krWertWahl = e.target.value; krWertHand = null; geaendert = true; krLaden(); });
+{ const b = document.getElementById("krWertBetrag");
+  b.addEventListener("input", ()=>{ geaendert = true; });
+  b.addEventListener("change", ()=>{ const n = gwZahl(b.value), g = (krWertHand = null, krWertGewaehlt());
+    krWertHand = n && (!g || n !== g.w) ? n : null; b.blur(); krLaden(); }); }
 { const kp = document.getElementById("krKp");
   kp.addEventListener("input", ()=>{ geaendert = true; });
   kp.addEventListener("change", ()=>{ const n = gwZahl(kp.value); kp.value = n ? gwFmt(n) : ""; krLaden(); }); }
@@ -1711,6 +1737,8 @@ window.addEventListener("message", e=>{
   const d = e.data;
   if (e.origin !== KR_ORIGIN || !d || (e.source !== krFrame.contentWindow && (!krFensterRef || e.source !== krFensterRef))) return;
   if (d.typ === "gnotkg-kosten"){
+    if (e.source === krFrame.contentWindow && KR_REITER.some(r=>r[0]===d.reiter) && krReiter.value !== d.reiter){
+      krReiter.value = d.reiter; krReiterVonHand = true; krLaden(); return; }   // im Rechner anderen Reiter gewählt: mit Werten aus dem Bogen neu laden
     const gleich = krErgebnis && krErgebnis.gesamt === d.gesamt && krErgebnis.gw === d.gw;
     krLive.textContent = gleich ? "" : `Im Rechner aktuell: ${krKurz(d)} – mit „In den Vorgesprächsbogen übernehmen“ in den Bogen holen.`;
     return;
@@ -1729,7 +1757,7 @@ async function kostenMitnehmen(doc){
   if (!krKasten.checked) return;
   const kaufpreis = gwZahl(document.getElementById("krKp").value);
   if (!krErgebnis && !kaufpreis) return;
-  doc.getInfoDict().set(PDFLib.PDFName.of(KR_SCHLUESSEL), PDFLib.PDFHexString.fromText(JSON.stringify(Object.assign({version:1, kaufpreis, wertWahl:krWertWahl}, krErgebnis||{}))));
+  doc.getInfoDict().set(PDFLib.PDFName.of(KR_SCHLUESSEL), PDFLib.PDFHexString.fromText(JSON.stringify(Object.assign({version:1, kaufpreis, wertWahl:krWertWahl, wertHand:krWertHand}, krErgebnis||{}))));
   if (!krErgebnis) return;
   const fN = await doc.embedFont(PDFLib.StandardFonts.Helvetica), fB = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
   const BLAU = PDFLib.rgb(.118,.227,.373), TXT = PDFLib.rgb(.176,.216,.282), GRAU = PDFLib.rgb(.29,.333,.408);
@@ -1763,12 +1791,53 @@ function kostenAusPdf(doc){
   if (!d) return;
   if (d.kaufpreis) document.getElementById("krKp").value = gwFmt(d.kaufpreis);
   if (d.wertWahl) krWertWahl = d.wertWahl;
+  krWertHand = typeof d.wertHand === "number" ? d.wertHand : null;
   if (typeof d.gesamt !== "number"){ kostenAn(false); return; }
   krErgebnis = Object.fromEntries(KR_FELDER.map(k=>[k, d[k]]));
   if (KR_REITER.some(r=>r[0]===d.reiter)){ krReiter.value = d.reiter; krReiterVonHand = true; }
   kostenAn(false); krAnzeigen();
   krHinw.textContent = "Gespeicherte Berechnung. Zum Ändern „Werte aus dem Bogen übernehmen“ wählen.";
 }
+</script>
+<script>
+"use strict";
+/* =====================================================================
+   Einzelne Module ohne den Vorgesprächsbogen: vorgespraech.html?nur=erbspiegel | geschaeftswert | bewertung | kosten
+   (Kurzadressen erbspiegel.html, geschaeftswert.html, bewertung.html, kosten.html leiten hierher).
+   Gleiche Datei, damit jedes Modul immer auf dem neuesten Stand ist.
+   ===================================================================== */
+(() => {
+  const nur = new URLSearchParams(location.search).get("nur");
+  const MOD = { erbspiegel:{t:"Erbspiegel", zeigen:["esBereich"]},
+                geschaeftswert:{t:"Geschäftswert", zeigen:["gwBereich","krBereich"]},
+                bewertung:{t:"Grundstückswert (Bedarfsbewertung)", zeigen:["gwBereich","krBereich"]},
+                kosten:{t:"Kostenberechnung", zeigen:["krBereich","gwBereich"]} }[nur];
+  if (!MOD) return;
+  document.title = MOD.t + " – Notar Thomas Woinar";
+  const st = document.createElement("style");
+  st.textContent = ".nur-weg{display:none!important}";
+  document.head.appendChild(st);
+  const weg = el => el && el.classList.add("nur-weg");
+  const sheet = document.querySelector("main.sheet");
+  /* alles außer Kopf, Vorgangs-Nr. und den gewünschten Bereichen ausblenden */
+  [...sheet.children].forEach(el => {
+    if (el.matches("header.kopf, .kopfzeile, footer.fuss")) return;
+    if (el.matches(".gegenstand") && nur!=="erbspiegel") return;           // Gegenstand steuert Geschäftswert und Kosten
+    if (MOD.zeigen.includes(el.id)) return;
+    weg(el);
+  });
+  document.querySelectorAll(".kopfzeile > *").forEach(el => { if (el.id!=="f_vg" && el.htmlFor!=="f_vg") weg(el); });
+  ["btnMail"].forEach(id => weg(document.getElementById(id)));
+  const titel = document.createElement("div"); titel.className = "titel"; titel.innerHTML = `<b>${MOD.t.toUpperCase()}</b>`;
+  sheet.querySelector(".kopfzeile").after(titel);
+  document.getElementById("btnAblegen").textContent = "Ablegen (PDF)";
+  /* Reihenfolge: gewünschtes Modul zuerst */
+  const erstes = document.getElementById(MOD.zeigen[0]); if (erstes) titel.after(erstes);
+  if (nur==="erbspiegel"){ esKasten.checked = true; esKasten.dispatchEvent(new Event("change")); weg(esKasten.closest("label")); }
+  if (nur==="geschaeftswert"){ gwKasten.checked = true; gwKasten.dispatchEvent(new Event("change")); weg(gwKasten.closest("label")); }
+  if (nur==="bewertung"){ gwKasten.checked = true; gwKasten.dispatchEvent(new Event("change")); weg(gwKasten.closest("label")); bewertungAn(); }
+  if (nur==="kosten"){ krKasten.checked = true; krKasten.dispatchEvent(new Event("change")); weg(krKasten.closest("label")); }
+})();
 </script>
 </body>
 </html>
