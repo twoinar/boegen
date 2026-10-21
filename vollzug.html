@@ -69,6 +69,8 @@ input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border-left:
   border-bottom:2px solid var(--box-border);transform:translateY(-1px) rotate(-45deg)}
 .feldzeile{display:grid;grid-template-columns:80px minmax(0,1fr) auto 100px minmax(0,1.2fr);gap:10px;align-items:center}
 .feldzeile .l2{justify-self:end}
+.artzeile{display:grid;grid-template-columns:80px minmax(0,1fr);gap:10px;align-items:center;margin-bottom:10px}
+select{font:inherit;font-size:14px;font-weight:bold;color:var(--blue);background:var(--field);border:0;border-radius:2px;padding:6px 7px;width:100%;max-width:320px;cursor:pointer}
 label.cb{display:flex;gap:9px;align-items:center;cursor:pointer;padding:4px 0}
 
 /* Nachgenehmigung */
@@ -191,6 +193,16 @@ dialog.mail textarea{min-height:70px}
 
   <section>
     <h2><span>1</span><span>Urkunde</span></h2>
+    <div class="artzeile"><label for="f_art">Urkundsart:</label>
+      <select id="f_art" data-f="urkundsart">
+        <option value="kauf">Kaufvertrag</option>
+        <option value="uebertragung">Übertragungsvertrag</option>
+        <option value="grundschuld">Grundschuld</option>
+        <option value="scheidung">Scheidungsvereinbarung</option>
+        <option value="ehevertrag">Ehevertrag</option>
+        <option value="testament">Testament / Erbvertrag</option>
+        <option value="vorsorge">Vorsorgevollmacht</option>
+      </select></div>
     <div class="feldzeile"><label for="f_uvz">UVZ-Nr.:</label>
       <input type="text" id="f_uvz" data-f="uvz_nr" autocomplete="off">
       <label class="cb"><input type="checkbox" data-f="cb_papierurkunde"><span>Papierurkunde</span></label>
@@ -217,9 +229,9 @@ dialog.mail textarea{min-height:70px}
     <h2><span>3</span><span>Beteiligte, Kopien und Versand</span></h2>
     <div class="tab-wrap"><table>
       <thead>
-        <tr><th></th><th></th><th class="grp" colspan="4">Kopien</th><th class="grp" colspan="2">Vollzugsschreiben</th><th class="grp">Kostenberechnung</th><th class="nodruck"></th></tr>
+        <tr><th></th><th></th><th class="grp" colspan="4">Kopien</th><th class="grp" colspan="2">Vollzugsschreiben</th><th class="grp" colspan="2">Kostenberechnung</th><th class="nodruck"></th></tr>
         <tr><th class="l">Beteiligter</th><th class="l">Name</th><th>erteilt<small>(Anzahl)</small></th><th>gewünscht<small>(Anzahl)</small></th>
-          <th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th><th>per E-Mail</th><th class="nodruck"></th></tr>
+          <th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th><th class="nodruck"></th></tr>
       </thead>
       <tbody id="beteiligte"></tbody>
     </table></div>
@@ -235,32 +247,53 @@ dialog.mail textarea{min-height:70px}
     <h2><span>4</span><span>Vollzugsschritte</span></h2>
     <div class="schritte">
       <div>
-        <label class="cb"><input type="checkbox" data-f="anzeige_grest"><span>Anzeige Finanzamt Grunderwerbsteuer</span></label>
+        <label class="cb" data-arten="kauf uebertragung scheidung ehevertrag"><input type="checkbox" data-f="anzeige_grest"><span>Anzeige Finanzamt Grunderwerbsteuer</span></label>
         <div class="sub aufklapp" data-zeigen-wenn="anzeige_grest" data-leeren>
           <label class="cb"><input type="checkbox" data-f="grest_mit_ub" data-gruppe="ub"><span>mit UB</span></label>
           <label class="cb"><input type="checkbox" data-f="grest_ohne_ub" data-gruppe="ub"><span>ohne UB</span></label>
         </div>
-        <label class="cb"><input type="checkbox" data-f="anzeige_schenkungsteuer"><span>Anzeige Finanzamt Schenkungsteuer</span></label>
-        <label class="cb"><input type="checkbox" data-f="anzeige_gutachterausschuss"><span>Anzeige Gutachterausschuss</span></label>
-        <label class="cb"><input type="checkbox" data-f="vorkaufsrecht_gemeinde"><span>Vorkaufsrechtsverzichtserklärung Gemeinde</span></label>
-        <label class="cb"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
-        <label class="cb"><input type="checkbox" data-f="zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
-        <label class="cb"><input type="checkbox" data-f="zust_verwalter"><span>Zustimmung des Verwalters</span></label>
+        <label class="cb" data-arten="kauf uebertragung scheidung ehevertrag"><input type="checkbox" data-f="anzeige_schenkungsteuer"><span>Anzeige Finanzamt Schenkungsteuer</span></label>
+        <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="anzeige_gutachterausschuss"><span>Anzeige Gutachterausschuss</span></label>
+        <label class="cb" data-arten="kauf"><input type="checkbox" data-f="vorkaufsrecht_gemeinde"><span>Vorkaufsrechtsverzichtserklärung Gemeinde</span></label>
+        <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
+        <label class="cb" data-arten="uebertragung scheidung"><input type="checkbox" data-f="gb_eigentum"><span>Antrag auf Eigentumsumschreibung beim Grundbuchamt</span></label>
+        <label class="cb" data-arten="uebertragung"><input type="checkbox" data-f="gb_rechte"><span>Eintragung Nießbrauch / Wohnungsrecht</span></label>
+        <label class="cb" data-arten="uebertragung"><input type="checkbox" data-f="gb_rueckauflassung"><span>Eintragung Rückauflassungsvormerkung</span></label>
+        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_antrag"><span>Eintragungsantrag beim Grundbuchamt</span></label>
+        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_ausfertigung"><span>Vollstreckbare Ausfertigung an Gläubiger</span></label>
+        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_notarbestaetigung"><span>Notarbestätigung an Gläubiger</span></label>
+        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_treuhand"><span>Treuhandauflagen des Gläubigers beachten</span></label>
+        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_auszug"><span>Grundbuchauszug nach Eintragung an Gläubiger</span></label>
+        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="bank_entlassung"><span>Schuldhaftentlassung durch die Bank</span></label>
+        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="abschrift_gericht"><span>Abschrift an Familiengericht / Rechtsanwälte</span></label>
+        <label class="cb" data-arten="ehevertrag"><input type="checkbox" data-f="gueterrechtsregister"><span>Eintragung Güterrechtsregister</span></label>
+        <label class="cb" data-arten="scheidung ehevertrag"><input type="checkbox" data-f="ausfertigungen"><span>Ausfertigungen an die Beteiligten</span></label>
+        <label class="cb" data-arten="uebertragung scheidung ehevertrag testament"><input type="checkbox" data-f="ztr"><span>Registrierung Zentrales Testamentsregister</span></label>
+        <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_ag"><span>Ablieferung in die besondere amtliche Verwahrung (Amtsgericht)</span></label>
+        <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_notar"><span>Verwahrung beim Notar (Erbvertrag)</span></label>
+        <label class="cb" data-arten="testament"><input type="checkbox" data-f="hinterlegungsschein"><span>Hinterlegungsschein an Erblasser</span></label>
+        <label class="cb" data-arten="testament"><input type="checkbox" data-f="abschrift_erblasser"><span>Beglaubigte Abschrift an Erblasser</span></label>
+        <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="zvr"><span>Registrierung Zentrales Vorsorgeregister</span></label>
+        <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_vollmachtgeber"><span>Ausfertigung an Vollmachtgeber</span></label>
+        <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_bevollmaechtigte"><span>Ausfertigungen an Bevollmächtigte</span></label>
+        <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_zurueckhalten"><span>Ausfertigungen erst auf Anweisung des Vollmachtgebers erteilen</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung"><input type="checkbox" data-f="zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
+        <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="zust_verwalter"><span>Zustimmung des Verwalters</span></label>
+        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_sanierung"><span>Sanierungsrechtliche Genehmigung</span></label>
+        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_entwicklung"><span>Entwicklungsrechtliche Genehmigung</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung"><input type="checkbox" data-f="gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
+        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_nachlassgericht"><span>Genehmigung Nachlassgericht</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung ehevertrag"><input type="checkbox" data-f="gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
       </div>
       <div>
-        <label class="cb"><input type="checkbox" data-f="gen_sanierung"><span>Sanierungsrechtliche Genehmigung</span></label>
-        <label class="cb"><input type="checkbox" data-f="gen_entwicklung"><span>Entwicklungsrechtliche Genehmigung</span></label>
-        <label class="cb"><input type="checkbox" data-f="gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
-        <label class="cb"><input type="checkbox" data-f="gen_nachlassgericht"><span>Genehmigung Nachlassgericht</span></label>
-        <label class="cb"><input type="checkbox" data-f="gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
         <div class="sonst"><label class="cb"><input type="checkbox" data-f="sonstiges_vollzug"><span>Sonstiges:</span></label>
           <textarea rows="1" class="aufklapp" data-f="sonstiges_vollzug_text" data-zeigen-wenn="sonstiges_vollzug" data-leeren aria-label="Sonstiger Vollzugsschritt" placeholder="Text eingeben – das Feld wächst mit"></textarea></div>
       </div>
     </div>
-    <p class="fussnote">UB = Unbedenklichkeitsbescheinigung</p>
+    <p class="fussnote" id="ubNote">UB = Unbedenklichkeitsbescheinigung</p>
   </section>
 
-  <section>
+  <section id="loeschBereich">
     <h2><span>5</span><span>Löschungsbewilligungen</span></h2>
     <label class="cb l-schalter"><input type="checkbox" data-f="cb_loeschung" data-nurhtml><span><b>Löschungsbewilligungen</b> erforderlich</span></label>
     <div class="aufklapp" data-zeigen-wenn="cb_loeschung" data-leeren>
@@ -274,7 +307,7 @@ dialog.mail textarea{min-height:70px}
   </section>
 
   <section>
-    <h2><span>6</span><span>Weitere Anweisungen / Bemerkungen</span></h2>
+    <h2><span id="nrBem">6</span><span>Weitere Anweisungen / Bemerkungen</span></h2>
     <textarea rows="8" data-f="bemerkungen" aria-label="Weitere Anweisungen und Bemerkungen"></textarea>
   </section>
 
@@ -330,7 +363,7 @@ for (const [lab,k] of ROLLEN){
     <td><input type="number" min="0" step="1" data-f="${k}_kopien_gewuenscht" aria-label="${lab}: Kopien gewünscht"></td>
     ${cb("kopie_post","Kopie per Post")}${cb("kopie_email","Kopie per E-Mail")}
     ${cb("vollzug_post","Vollzugsschreiben per Post")}${cb("vollzug_email","Vollzugsschreiben per E-Mail")}
-    ${cb("kostenberechnung_email","Kostenberechnung per E-Mail")}
+    ${cb("kostenberechnung_post","Kostenberechnung per Post")}${cb("kostenberechnung_email","Kostenberechnung per E-Mail")}
     <td class="nodruck">${k==="v1"||k==="e1" ? "" : `<button type="button" class="weg" data-weg="${k}" title="${lab} entfernen" aria-label="${lab} entfernen">×</button>`}</td></tr>`);
   tb.lastElementChild.dataset.rolle = k;
 }
@@ -379,8 +412,27 @@ loeschZuruecksetzen(false);
 /* ---------- Beteiligte dynamisch ---------- */
 const GRUPPEN = { v:{keys:["v1","v2","v3"],name:"Veräußerer",min:1}, e:{keys:["e1","e2","e3"],name:"Erwerber",min:1},
                   makler:{keys:["makler"],name:"Makler",min:0}, sonst:{keys:["sonst","sonst2","sonst3","sonst4","sonst5"],name:"Sonstiger",min:0} };
+/* Urkundsarten: Rollen der Beteiligten (null = Gruppe entfällt) und ob Löschungen vorkommen */
+const ARTEN = {
+  kauf:         { name:"Kaufvertrag",            v:["Veräußerer",1], e:["Erwerber",1],          makler:true,  loesch:true },
+  uebertragung: { name:"Übertragungsvertrag",    v:["Übergeber",1],  e:["Übernehmer",1],        makler:false, loesch:true },
+  grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Gläubiger",1],         makler:false, loesch:true },
+  scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:false, loesch:true },
+  ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:false, loesch:false },
+  testament:    { name:"Testament / Erbvertrag", v:["Erblasser",1],  e:null,                    makler:false, loesch:false },
+  vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:false, loesch:false },
+};
+const artWahl = () => document.querySelector('[data-f="urkundsart"]');
+const art = () => ARTEN[artWahl().value] ? artWahl().value : "kauf";
+function gruppenSetzen(){
+  const a = ARTEN[art()];
+  Object.assign(GRUPPEN.v, {name:a.v[0], min:a.v[1], aus:false});
+  Object.assign(GRUPPEN.e, a.e ? {name:a.e[0], min:a.e[1], aus:false} : {name:"Erwerber", min:0, aus:true});
+  GRUPPEN.makler.aus = !a.makler;
+}
 /* Bezeichnungen: vorgegeben (Veräußerer 1, Erwerber …), aber frei überschreibbar, z. B. „Berechtigte“ */
-const STANDARD_BEZ = /^(Veräußerer|Erwerber|Makler|Sonstiger|Sonstige)( \d+)?$/;
+const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0]]).filter(Boolean)];
+const STANDARD_BEZ = new RegExp("^(" + [...new Set(ROLLENNAMEN)].join("|") + ")( \\d+)?$");
 const zeile = k => tb.querySelector(`tr[data-rolle="${k}"]`);
 const zeileHatInhalt = k => [...zeile(k).querySelectorAll("[data-f]")].some(el => el.type==="checkbox" ? el.checked : (el.value.trim()!=="" && !(el.classList.contains("bez") && STANDARD_BEZ.test(el.value.trim()))));
 function zeileKopieren(von,nach){
@@ -397,13 +449,17 @@ function beteiligteAnzeigen(){
       const inp = zeile(k).querySelector(".bez"), vorgabe = cfg.name + (cfg.keys.length>1 && sichtbar.length>1 ? " "+(i+1) : "");
       if (!inp.value.trim() || STANDARD_BEZ.test(inp.value.trim())) inp.value = vorgabe;
     });
-    document.querySelector(`[data-plus="${g}"]`).hidden = sichtbar.length >= cfg.keys.length;
+    const plus = document.querySelector(`[data-plus="${g}"]`);
+    plus.hidden = cfg.aus || sichtbar.length >= cfg.keys.length || cfg.name==="Ehegatte";
+    plus.textContent = "+ " + (g==="makler" ? "Makler" : g==="sonst" ? "sonstiger Beteiligter" : (sichtbar.length ? "weiterer " : "") + cfg.name);
+    sichtbar.forEach(k=>{ const w = zeile(k).querySelector("button.weg"); if (w) w.hidden = sichtbar.length <= cfg.min; });
   }
 }
 function beteiligteZuruecksetzen(ausInhalt){
   for (const cfg of Object.values(GRUPPEN)){
     let n = cfg.min;
-    if (ausInhalt) cfg.keys.forEach((k,i)=>{ if (zeileHatInhalt(k)) n = Math.max(n,i+1); });
+    if (ausInhalt && !cfg.aus) cfg.keys.forEach((k,i)=>{ if (zeileHatInhalt(k)) n = Math.max(n,i+1); });
+    if (cfg.aus) n = 0;
     cfg.keys.forEach((k,i)=>{ zeile(k).hidden = i>=n; });
   }
   beteiligteAnzeigen();
@@ -426,6 +482,53 @@ beteiligteZuruecksetzen(false);
 
 const felder = () => Array.from(document.querySelectorAll("[data-f]"));
 let geaendert = false;
+
+/* ---------- Urkundsart: passende Beteiligte, Vollzugsschritte und Löschungen ---------- */
+const schrittSpalten = () => Array.from(document.querySelectorAll(".schritte > div"));
+function schritteVerteilen(){
+  const [s1, s2] = schrittSpalten(), sonst = s2.querySelector(".sonst");
+  const einheiten = [];   // Grunderwerbsteuer und „mit/ohne UB“ bleiben zusammen
+  for (const el of [...s1.children, ...s2.children]){
+    if (el===sonst) continue;
+    if (el.matches(".sub") && einheiten.length) einheiten[einheiten.length-1].push(el); else einheiten.push([el]);
+  }
+  const gewicht = e => e.filter(el=>el.matches("label.cb") && !el.hidden).length;
+  const gesamt = einheiten.reduce((n,e)=>n+gewicht(e),0) + 1;
+  let n = 0;
+  for (const e of einheiten){
+    const ziel = (n + gewicht(e)/2 < gesamt/2) ? s1 : s2;
+    e.forEach(el=>ziel.insertBefore(el, ziel===s2 ? sonst : null));
+    n += gewicht(e);
+  }
+}
+function artAnwenden(nachfragen){
+  const a = art(), cfg = ARTEN[a];
+  const wegSchritte = [...document.querySelectorAll(".schritte [data-arten]")].filter(l=>!l.dataset.arten.split(" ").includes(a));
+  const wegLoesch = !cfg.loesch;
+  gruppenSetzen();
+  const wegZeilen = Object.values(GRUPPEN).filter(g=>g.aus).flatMap(g=>g.keys).filter(k=>!zeile(k).hidden || zeileHatInhalt(k));
+  if (nachfragen){
+    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
+    if (verlust && !confirm(`Für „${cfg.name}“ entfallen Angaben, die schon eingetragen sind (Vollzugsschritte, Beteiligte oder Löschungen). Diese werden gelöscht. Fortfahren?`)) return false;
+  }
+  wegSchritte.forEach(l=>{ l.querySelector("input").checked = false; });
+  wegZeilen.forEach(zeileLeeren);
+  document.querySelectorAll(".schritte [data-arten]").forEach(l=>{ l.hidden = !l.dataset.arten.split(" ").includes(a); });
+  const lb5 = document.getElementById("loeschBereich");
+  if (wegLoesch){ leeren(lb5); }
+  lb5.hidden = wegLoesch;
+  document.getElementById("nrBem").textContent = wegLoesch ? "5" : "6";
+  document.getElementById("ubNote").hidden = !document.querySelector('.schritte [data-f="anzeige_grest"]').closest("label").dataset.arten.split(" ").includes(a);
+  schritteVerteilen();
+  return true;
+}
+let artVorher = "kauf";
+document.addEventListener("change", e=>{
+  if (e.target!==artWahl()) return;
+  if (!artAnwenden(true)){ artWahl().value = artVorher; gruppenSetzen(); return; }
+  artVorher = art();
+  beteiligteZuruecksetzen(true); loeschZuruecksetzen(true); dynamik(); textfelderAnpassen();
+});
 
 /* Gruppen, in denen nur ein Kästchen sinnvoll ist (mit/ohne UB, Status je Löschung) */
 document.addEventListener("change", e=>{
@@ -459,6 +562,7 @@ function dynamik(ausloeser){
   document.getElementById("nachgenehmigung").classList.toggle("aktiv", istAn("nachgen_erforderlich"));
 }
 document.addEventListener("change", e=>{ if (e.target.type==="checkbox"){ dynamik(e.target); if (e.target.dataset.f==="cb_loeschung") loeschZuruecksetzen(true); } });
+artAnwenden(false); beteiligteZuruecksetzen(false);
 dynamik();
 window.addEventListener("beforeunload", e=>{ if (geaendert){ e.preventDefault(); e.returnValue=""; }});
 
@@ -586,6 +690,8 @@ async function pdfErzeugen(){
 
   // 1 Urkunde
   ueberschrift("1","Urkunde");
+  { page.drawText("Urkundsart:",{x:ML,y:y-9.5,size:9.5,font:fN,color:GRAU});
+    page.drawText(pdfText(ARTEN[art()].name),{x:ML+60,y:y-10.5,size:10.5,font:fB,color:BLAU}); y-=17; }
   { const s=9.5; let x=ML;
     page.drawText("UVZ-Nr.:",{x,y:y-s,size:s,font:fN,color:GRAU}); x+=48;
     const uvz=pdfText(v("uvz_nr")||"—"); page.drawText(uvz,{x,y:y-s,size:10.5,font:fB,color:TEXT}); x+=Math.max(110, tw(uvz,fB,10.5)+18);
@@ -624,11 +730,11 @@ async function pdfErzeugen(){
 
   // 3 Beteiligte
   ueberschrift("3","Beteiligte, Kopien und Versand");
-  { const sp=[{t:"Beteiligter",w:88,l:1},{t:"Name",w:125,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:"Post",w:36},{t:"E-Mail",w:36},{t:"per E-Mail",w:74}];
+  { const sp=[{t:"Beteiligter",w:88,l:1},{t:"Name",w:125,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:"Post",w:36},{t:"E-Mail",w:36},{t:"Post",w:36},{t:"E-Mail",w:38}];
     const xs=[]; let x=ML; for (const c of sp){ xs.push(x); x+=c.w; }
     platz(40);
     const grp=(t,a,b)=>{ const x0=xs[a], x1=xs[b]+sp[b].w; page.drawText(pdfText(t),{x:(x0+x1)/2-tw(t,fB,7)/2,y:y-8,size:7,font:fB,color:BLAU}); page.drawLine({start:{x:x0+2,y:y-11},end:{x:x1-2,y:y-11},thickness:.5,color:LINIE}); };
-    grp("Kopien",2,5); grp("Vollzugsschreiben",6,7); grp("Kostenberechnung",8,8); y-=14;
+    grp("Kopien",2,5); grp("Vollzugsschreiben",6,7); grp("Kostenberechnung",8,9); y-=14;
     sp.forEach((c,i)=>{ const tx=pdfText(c.t); page.drawText(tx,{x: c.l ? xs[i]+2 : xs[i]+(c.w-tw(tx,fB,7))/2, y:y-8, size:7, font:fB, color:GRAU}); });
     page.drawText("(Anzahl)",{x:xs[2]+(sp[2].w+sp[3].w-tw("(Anzahl)",fN,6))/2,y:y-15,size:6,font:fN,color:GRAU});
     y-=19; page.drawLine({start:{x:ML,y},end:{x:W-MR,y},thickness:.6,color:LINIE});
@@ -641,7 +747,7 @@ async function pdfErzeugen(){
       bez.forEach((z,i)=>page.drawText(z,{x:xs[0]+2,y:y-12-i*11,size:8.5,font:fB,color:TEXT}));
       nam.forEach((z,i)=>page.drawText(z,{x:xs[1]+2,y:y-12-i*11,size:8.5,font:fN,color:TEXT}));
       [["kopien_erteilt",2],["kopien_gewuenscht",3]].forEach(([f,i])=>{ const t=pdfText(g(f)); if (t) page.drawText(t,{x:xs[i]+(sp[i].w-tw(t,fN,9))/2,y:y-12,size:9,font:fN,color:TEXT}); });
-      [["kopie_post",4],["kopie_email",5],["vollzug_post",6],["vollzug_email",7],["kostenberechnung_email",8]]
+      [["kopie_post",4],["kopie_email",5],["vollzug_post",6],["vollzug_email",7],["kostenberechnung_post",8],["kostenberechnung_email",9]]
         .forEach(([f,i])=>kaestchen(xs[i]+(sp[i].w-9)/2, y-13, g(f)));
       y-=h; page.drawLine({start:{x:ML,y},end:{x:W-MR,y},thickness:.5,color:LINIE});
     }
@@ -653,7 +759,7 @@ async function pdfErzeugen(){
   { const spalten = Array.from(document.querySelectorAll(".schritte > div"));
     const sb = (BW-24)/2;
     // Höhe grob abschätzen, damit beide Spalten auf derselben Seite beginnen
-    const schaetz = Math.max(...spalten.map(s=>s.querySelectorAll("label.cb").length*13 + (s.querySelector("textarea") ? umbrechen(s.querySelector("textarea").value,fN,9,sb-20).length*12 : 0)));
+    const schaetz = Math.max(...spalten.map(s=>[...s.querySelectorAll("label.cb")].filter(l=>!l.closest("[hidden]")).length*13 + (s.querySelector("textarea") ? umbrechen(s.querySelector("textarea").value,fN,9,sb-20).length*12 : 0)));
     platz(schaetz+10);
     const y0=y; let yMin=y;
     spalten.forEach((s,si)=>{
@@ -674,11 +780,11 @@ async function pdfErzeugen(){
       yMin=Math.min(yMin,y);
     });
     y=yMin-2;
-    text("UB = Unbedenklichkeitsbescheinigung",{s:7.5,c:GRAU});
+    if (!document.getElementById("ubNote").hidden) text("UB = Unbedenklichkeitsbescheinigung",{s:7.5,c:GRAU});
   }
 
   // 5 Löschungsbewilligungen
-  ueberschrift("5","Löschungsbewilligungen");
+  if (ARTEN[art()].loesch){ ueberschrift("5","Löschungsbewilligungen");
   { const zeilen = lzeilen().filter(r=>!r.hidden && lHatInhalt(r));
     if (!v("cb_loeschung") || !zeilen.length) cbZeile(false, "Löschungsbewilligungen erforderlich", ML, BW);
     else {
@@ -699,8 +805,9 @@ async function pdfErzeugen(){
     }
   }
 
+  }
   // 6 Bemerkungen
-  ueberschrift("6","Weitere Anweisungen / Bemerkungen");
+  ueberschrift(ARTEN[art()].loesch ? "6" : "5","Weitere Anweisungen / Bemerkungen");
   { const b=v("bemerkungen");
     if (b) text(b,{s:9.5});
     else { platz(70); page.drawRectangle({x:ML,y:y-64,width:BW,height:64,color:FELD}); y-=70; } }
@@ -770,6 +877,8 @@ async function bogenLaden(bytes, name){
   if (roh && roh.decodeText){
     const d = JSON.parse(roh.decodeText()), f = d.f || {};
     for (const el of felder()){ const w=f[el.dataset.f]; if (el.type==="checkbox") el.checked=!!w; else el.value = w===undefined ? "" : w; }
+    if (!ARTEN[artWahl().value]) artWahl().value = "kauf";
+    artAnwenden(false); artVorher = art();
     beteiligteZuruecksetzen(true); loeschZuruecksetzen(true); dynamik(); textfelderAnpassen(); geaendert=false;
     meldung(`„${name}“ geöffnet. Änderungen mit „Vollzugsbogen ablegen“ speichern.`);
     return;
@@ -778,7 +887,7 @@ async function bogenLaden(bytes, name){
   const namen = new Set(form.getFields().map(f=>f.getName()));
   if (!namen.has("uvz_nr") && !namen.has("vorgang_nr")) throw new Error("Diese Datei ist kein Vollzugsbogen.");
   for (const el of felder()){
-    const n=el.dataset.f; if (!namen.has(n)){ if (el.type==="checkbox") el.checked=false; else el.value=""; continue; }
+    const n=el.dataset.f; if (!namen.has(n)){ if (el.type==="checkbox") el.checked=false; else el.value = el===artWahl() ? "kauf" : ""; continue; }
     if (el.type==="checkbox") el.checked = form.getCheckBox(n).isChecked();
     else { const v=form.getTextField(n).getText()||""; el.value = el.dataset.date!==undefined ? nachIso(v) : v; }
   }
@@ -786,6 +895,7 @@ async function bogenLaden(bytes, name){
   document.querySelectorAll("[data-zeigen-wenn][data-leeren]").forEach(c=>{
     const b=c.dataset.zeigenWenn; if (!b.startsWith("!") && hatInhalt(c)){ const k=document.querySelector(`[data-f="${b}"]`); if(k) k.checked=true; }
   });
+  artAnwenden(false); artVorher = art();
   beteiligteZuruecksetzen(true); loeschZuruecksetzen(true); dynamik(); textfelderAnpassen(); geaendert=false; meldung(`„${name}“ geöffnet. Änderungen mit „Vollzugsbogen ablegen“ speichern.`);
 }
 async function oeffnen(){
@@ -804,6 +914,7 @@ async function oeffnen(){
 function neu(){
   if (geaendert && !confirm("Alle Eingaben leeren und einen neuen Bogen beginnen?")) return;
   for (const el of felder()){ if (el.type==="checkbox") el.checked=false; else el.value=""; }
+  artWahl().value = "kauf"; artAnwenden(false); artVorher = "kauf";
   beteiligteZuruecksetzen(false); loeschZuruecksetzen(false); dynamik(); textfelderAnpassen(); geaendert=false; document.getElementById("msg").innerHTML=""; window.scrollTo(0,0);
   document.querySelector('[data-f="uvz_nr"]').focus();
 }
@@ -863,6 +974,7 @@ function mailText(notiz){
   const z=["Hallo,","","anbei der Vollzugsbogen zur UVZ-Nr. "+uvzWert()+"."];
   if (notiz.trim()) z.push("", notiz.trim());
   z.push("");
+  z.push("Urkundsart:   "+ARTEN[art()].name);
   if (uvz) z.push("UVZ-Nr.:      "+uvz);
   if (vorgangWert()) z.push("Vorgangs-Nr.: "+vorgangWert());
   if (document.querySelector('[data-f="cb_papierurkunde"]').checked) z.push("Papierurkunde: ja");
