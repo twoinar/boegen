@@ -1899,7 +1899,15 @@ function kostenAusPdf(doc){
   if (geg && GEGENSTAENDE.includes(geg)){ gegFeld.value = geg; gegenstandAnzeigen(); }
   /* im Fenster eines anderen Bogens: Ergebnis laufend an diesen melden */
   if (window.parent !== window){
-    const melden = () => { try{ window.parent.postMessage({typ:"gw-ergebnis", gw:gwVermoegen().gw.map(x=>({t:x.t, w:Math.round(x.w)}))}, "*"); }catch(e){} };
+    const melden = () => { try{
+      const gw = gwVermoegen().gw.map(x=>({t:x.t, w:Math.round(x.w)}));
+      if (gegAuswahl().includes("Übertragung") && bbApi() && BB_GESAMT.hatErgebnis()){   // Übertragung: Wert des Grundbesitzes zur Wahl
+        const w = BB_GESAMT.werte();
+        if (w.vw) gw.push({t:"Übertragung: Verkehrswert Grundbesitz", w:Math.round(w.vw)});
+        if (w.gbw) gw.push({t:"Übertragung: Grundbesitzwert (Bedarfswert)", w:Math.round(w.gbw)});
+        if (w.vw && w.gbw) gw.push({t:"Übertragung: Mittelwert", w:Math.round((w.vw+w.gbw)/2)});
+      }
+      window.parent.postMessage({typ:"gw-ergebnis", gw}, "*"); }catch(e){} };
     document.addEventListener("input", ()=>setTimeout(melden, 50)); document.addEventListener("change", ()=>setTimeout(melden, 50));
     window.addEventListener("message", e=>{ if (e.data && e.data.typ==="gnotkg-grundstuecke-bitte") return; setTimeout(melden, 50); });
     setInterval(melden, 1500);

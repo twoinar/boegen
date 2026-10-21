@@ -522,7 +522,7 @@ const GRUPPEN = { v:{keys:["v1","v2","v3"],name:"Veräußerer",min:1}, e:{keys:[
 /* Urkundsarten: Rollen der Beteiligten (null = Gruppe entfällt) und ob Löschungen vorkommen */
 const ARTEN = {
   kauf:         { name:"Kaufvertrag",            v:["Veräußerer",1], e:["Erwerber",1],          makler:["Makler",0],  loesch:true },
-  uebertragung: { name:"Übertragungsvertrag",    v:["Übergeber",1],  e:["Übernehmer",1],        makler:null, loesch:true },
+  uebertragung: { name:"Übertragungsvertrag",    v:["Übergeber",1],  e:["Übernehmer",1],        makler:null, loesch:true, gw:"Übertragung" },
   grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Erwerber",0],          makler:["Gläubiger",1], loesch:true },
   scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:null, loesch:true },
   ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false },
@@ -647,7 +647,7 @@ let gwWert = null;
 const gwFmt = n => n.toLocaleString("de-DE",{maximumFractionDigits:2});
 document.getElementById("btnGw").onclick = ()=>{
   const g = ARTEN[art()].gw; if (!g) return;
-  gwWert = null; document.getElementById("gwOk").disabled = true; document.getElementById("gwErg").textContent = "Noch kein Geschäftswert berechnet.";
+  gwWert = null; gwListe = []; gwWahl = 0; document.getElementById("gwOk").disabled = true; document.getElementById("gwErg").textContent = "Noch kein Geschäftswert berechnet.";
   if (gwFrame.dataset.geg !== g){ gwFrame.src = GW_MODUL + encodeURIComponent(g); gwFrame.dataset.geg = g; }
   gwDialog.showModal();
 };
@@ -656,12 +656,19 @@ document.getElementById("gwOk").onclick = ()=>{
   if (gwWert==null) return;
   document.getElementById("f_gw").value = gwFmt(gwWert); geaendert = true; gwDialog.close();
 };
+let gwListe = [], gwWahl = 0;
 window.addEventListener("message", e=>{
   const d = e.data; if (!d || d.typ!=="gw-ergebnis" || e.source!==gwFrame.contentWindow) return;
-  const g = ARTEN[art()].gw, x = (d.gw||[]).find(x=>g && String(x.t).includes(g));
-  gwWert = x && x.w>0 ? x.w : null;
+  const g = ARTEN[art()].gw, liste = (d.gw||[]).filter(x=>g && String(x.t).includes(g) && x.w>0);
+  if (JSON.stringify(liste)===JSON.stringify(gwListe)) return;
+  gwListe = liste; if (gwWahl >= liste.length) gwWahl = 0;
+  const erg = document.getElementById("gwErg");
+  if (!liste.length) erg.textContent = "Noch kein Geschäftswert berechnet.";
+  else if (liste.length===1) erg.textContent = `${liste[0].t}: ${gwFmt(liste[0].w)} €`;
+  else erg.innerHTML = liste.map((x,i)=>`<label style="margin-right:14px;white-space:nowrap"><input type="radio" name="gwWahl" value="${i}"${i===gwWahl?" checked":""}> ${x.t.replace(/^.*?: /,"").replace(/[<>&]/g,"")}: <b>${gwFmt(x.w)} €</b></label>`).join("");
+  erg.querySelectorAll('input[name="gwWahl"]').forEach(r=>r.onchange=()=>{ gwWahl=+r.value; gwWert=gwListe[gwWahl].w; });
+  gwWert = liste.length ? liste[gwWahl].w : null;
   document.getElementById("gwOk").disabled = gwWert==null;
-  document.getElementById("gwErg").textContent = gwWert==null ? "Noch kein Geschäftswert berechnet." : `${x.t}: ${gwFmt(gwWert)} €`;
 });
 document.addEventListener("change", e=>{
   if (e.target!==artWahl()) return;
