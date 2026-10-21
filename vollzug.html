@@ -289,9 +289,11 @@ dialog.mail textarea{min-height:70px}
           <label class="cb"><input type="checkbox" data-f="sg_familiengericht"><span>Genehmigung Familiengericht</span></label>
         </div>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_ag"><span>Ablieferung in die besondere amtliche Verwahrung (Amtsgericht)</span></label>
-        <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_notar"><span>Verwahrung beim Notar (Erbvertrag)</span></label>
-        <label class="cb" data-arten="testament"><input type="checkbox" data-f="hinterlegungsschein"><span>Hinterlegungsschein an Testator</span></label>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="abschrift_erblasser"><span>Beglaubigte Abschrift an Testator</span></label>
+        <div class="sub aufklapp" data-zeigen-wenn="abschrift_erblasser" data-leeren>
+          <label class="cb"><input type="checkbox" data-f="abschrift_erbl_email"><span>elektronisch per E-Mail</span></label>
+          <label class="cb"><input type="checkbox" data-f="abschrift_erbl_post"><span>per Post</span></label>
+        </div>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="zvr"><span>Registrierung Zentrales Vorsorgeregister</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_vollmachtgeber"><span>Ausfertigung an Vollmachtgeber</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_bevollmaechtigte"><span>Ausfertigungen an Bevollmächtigte</span></label>
