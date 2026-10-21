@@ -111,6 +111,9 @@ td input[type=text]{min-width:140px}
 td input.bez{min-width:0;width:118px;font-weight:bold;background:transparent;box-shadow:inset 0 -1px 0 var(--line);padding:4px 2px}
 td input.bez:focus{background:var(--field-focus)}
 .fussnote{font-size:11px;color:var(--muted);margin-top:6px}
+.gs-kauf{margin-top:10px;border-top:1px dashed var(--line);padding-top:6px}
+.gs-reihe{display:grid;grid-template-columns:auto 150px auto minmax(0,1fr);gap:10px;align-items:center;padding-left:25px;margin:4px 0}
+@media (max-width:640px){.gs-reihe{grid-template-columns:1fr}}
 
 /* Löschungen */
 .l-tab td input[type=text]{min-width:260px}
@@ -287,6 +290,17 @@ dialog.mail textarea{min-height:70px}
           <textarea rows="1" class="aufklapp" data-f="sonstiges_vollzug_text" data-zeigen-wenn="sonstiges_vollzug" data-leeren aria-label="Sonstiger Vollzugsschritt" placeholder="Text eingeben – das Feld wächst mit"></textarea></div>
       </div>
     </div>
+    <div class="gs-kauf" id="gsKauf">
+      <label class="cb"><input type="checkbox" data-f="kauf_grundschuld"><span><b>Finanzierungsgrundschuld</b> im Anschluss mitbeurkundet</span></label>
+      <div class="aufklapp" data-zeigen-wenn="kauf_grundschuld" data-leeren>
+        <div class="gs-reihe"><label for="f_kgsuvz">UVZ-Nr. Grundschuld:</label><input type="text" id="f_kgsuvz" data-f="kgs_uvz" autocomplete="off">
+          <label for="f_kgsgl">Gläubiger:</label><input type="text" id="f_kgsgl" data-f="kgs_glaeubiger"></div>
+        <div class="sub">
+          <label class="cb"><input type="checkbox" data-f="kgs_ausfertigung"><span>Vollstreckbare Ausfertigung an Gläubiger</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_notarbestaetigung"><span>Notarbestätigung an Gläubiger</span></label>
+        </div>
+      </div>
+    </div>
     <p class="fussnote" id="ubNote">UB = Unbedenklichkeitsbescheinigung</p>
   </section>
 
@@ -411,13 +425,13 @@ const GRUPPEN = { v:{keys:["v1","v2","v3"],name:"Veräußerer",min:1}, e:{keys:[
                   makler:{keys:["makler"],name:"Makler",min:0}, sonst:{keys:["sonst","sonst2","sonst3","sonst4","sonst5"],name:"Sonstiger",min:0} };
 /* Urkundsarten: Rollen der Beteiligten (null = Gruppe entfällt) und ob Löschungen vorkommen */
 const ARTEN = {
-  kauf:         { name:"Kaufvertrag",            v:["Veräußerer",1], e:["Erwerber",1],          makler:true,  loesch:true },
-  uebertragung: { name:"Übertragungsvertrag",    v:["Übergeber",1],  e:["Übernehmer",1],        makler:false, loesch:true },
-  grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Gläubiger",1],         makler:false, loesch:true },
-  scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:false, loesch:true },
-  ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:false, loesch:false },
-  testament:    { name:"Testament / Erbvertrag", v:["Erblasser",1],  e:null,                    makler:false, loesch:false },
-  vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:false, loesch:false },
+  kauf:         { name:"Kaufvertrag",            v:["Veräußerer",1], e:["Erwerber",1],          makler:["Makler",0],  loesch:true },
+  uebertragung: { name:"Übertragungsvertrag",    v:["Übergeber",1],  e:["Übernehmer",1],        makler:null, loesch:true },
+  grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Erwerber",0],          makler:["Gläubiger",1], loesch:true },
+  scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:null, loesch:true },
+  ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false },
+  testament:    { name:"Testament / Erbvertrag", v:["Erblasser",1],  e:null,                    makler:null, loesch:false },
+  vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false },
 };
 const artWahl = () => document.querySelector('[data-f="urkundsart"]');
 const art = () => ARTEN[artWahl().value] ? artWahl().value : "kauf";
@@ -425,10 +439,10 @@ function gruppenSetzen(){
   const a = ARTEN[art()];
   Object.assign(GRUPPEN.v, {name:a.v[0], min:a.v[1], aus:false});
   Object.assign(GRUPPEN.e, a.e ? {name:a.e[0], min:a.e[1], aus:false} : {name:"Erwerber", min:0, aus:true});
-  GRUPPEN.makler.aus = !a.makler;
+  Object.assign(GRUPPEN.makler, a.makler ? {name:a.makler[0], min:a.makler[1], aus:false} : {name:"Makler", min:0, aus:true});
 }
 /* Bezeichnungen: vorgegeben (Veräußerer 1, Erwerber …), aber frei überschreibbar, z. B. „Berechtigte“ */
-const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0]]).filter(Boolean)];
+const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0], a.makler && a.makler[0]]).filter(Boolean)];
 const STANDARD_BEZ = new RegExp("^(" + [...new Set(ROLLENNAMEN)].join("|") + ")( \\d+)?$");
 const zeile = k => tb.querySelector(`tr[data-rolle="${k}"]`);
 const zeileHatInhalt = k => [...zeile(k).querySelectorAll("[data-f]")].some(el => el.type==="checkbox" ? el.checked : (el.value.trim()!=="" && !(el.classList.contains("bez") && STANDARD_BEZ.test(el.value.trim()))));
@@ -448,7 +462,7 @@ function beteiligteAnzeigen(){
     });
     const plus = document.querySelector(`[data-plus="${g}"]`);
     plus.hidden = cfg.aus || sichtbar.length >= cfg.keys.length || cfg.name==="Ehegatte";
-    plus.textContent = "+ " + (g==="makler" ? "Makler" : g==="sonst" ? "sonstiger Beteiligter" : (sichtbar.length ? "weiterer " : "") + cfg.name);
+    plus.textContent = "+ " + (g==="sonst" ? "sonstiger Beteiligter" : (sichtbar.length ? "weiterer " : "") + cfg.name);
     sichtbar.forEach(k=>{ const w = zeile(k).querySelector("button.weg"); if (w) w.hidden = sichtbar.length <= cfg.min; });
   }
 }
@@ -505,12 +519,15 @@ function artAnwenden(nachfragen){
   gruppenSetzen();
   const wegZeilen = Object.values(GRUPPEN).filter(g=>g.aus).flatMap(g=>g.keys).filter(k=>!zeile(k).hidden || zeileHatInhalt(k));
   if (nachfragen){
-    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
+    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (a!=="kauf" && istAn("kauf_grundschuld")) || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
     if (verlust && !confirm(`Für „${cfg.name}“ entfallen Angaben, die schon eingetragen sind (Vollzugsschritte, Beteiligte oder Löschungen). Diese werden gelöscht. Fortfahren?`)) return false;
   }
   wegSchritte.forEach(l=>{ l.querySelector("input").checked = false; });
   wegZeilen.forEach(zeileLeeren);
   document.querySelectorAll(".schritte [data-arten]").forEach(l=>{ l.hidden = !l.dataset.arten.split(" ").includes(a); });
+  const gk = document.getElementById("gsKauf");
+  if (a!=="kauf") leeren(gk);
+  gk.hidden = a!=="kauf";
   const lb5 = document.getElementById("loeschBereich");
   if (wegLoesch){ leeren(lb5); }
   lb5.hidden = wegLoesch;
@@ -777,6 +794,17 @@ async function pdfErzeugen(){
       yMin=Math.min(yMin,y);
     });
     y=yMin-2;
+    if (art()==="kauf"){
+      y-=4; cbZeile(v("kauf_grundschuld"), "Finanzierungsgrundschuld im Anschluss mitbeurkundet", ML, BW, {fett:true});
+      if (v("kauf_grundschuld")){
+        const teile=[]; if (v("kgs_uvz")) teile.push("UVZ-Nr. Grundschuld: "+v("kgs_uvz")); if (v("kgs_glaeubiger")) teile.push("Gläubiger: "+v("kgs_glaeubiger"));
+        if (teile.length) text(teile.join("   ·   "),{x:ML+16,max:BW-16});
+        platz(14); let x=ML+16;
+        [["kgs_ausfertigung","Vollstreckbare Ausfertigung an Gläubiger"],["kgs_notarbestaetigung","Notarbestätigung an Gläubiger"]].forEach(([f,t])=>{
+          kaestchen(x, y-9.5, v(f)); page.drawText(pdfText(t),{x:x+14,y:y-9,size:9,font:fN,color:TEXT}); x+=14+tw(t,fN,9)+24; });
+        y-=15;
+      }
+    }
     if (!document.getElementById("ubNote").hidden) text("UB = Unbedenklichkeitsbescheinigung",{s:7.5,c:GRAU});
   }
 
@@ -974,6 +1002,7 @@ function mailText(notiz){
   z.push("Urkundsart:   "+ARTEN[art()].name);
   if (uvz) z.push("UVZ-Nr.:      "+uvz);
   if (vorgangWert()) z.push("Vorgangs-Nr.: "+vorgangWert());
+  if (art()==="kauf" && istAn("kauf_grundschuld")) z.push("Grundschuld:  mitbeurkundet" + (document.querySelector('[data-f="kgs_uvz"]').value.trim() ? ", UVZ-Nr. "+document.querySelector('[data-f="kgs_uvz"]').value.trim() : ""));
   if (document.querySelector('[data-f="cb_papierurkunde"]').checked) z.push("Papierurkunde: ja");
   Array.from(tb.rows).filter(r=>!r.hidden).forEach(r=>{
     const name = r.querySelector('[data-f$="_name"]').value.trim(); if (!name) return;
