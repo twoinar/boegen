@@ -1901,6 +1901,9 @@ function kostenAusPdf(doc){
   if (window.parent !== window){
     const melden = () => { try{
       const r = gwVermoegen(), gw = r.gw.map(x=>({t:x.t, w:Math.round(x.w)}));
+      const kr = krGwLetzt || (krErgebnis && {reiter:krErgebnis.reiter, gw:krErgebnis.gw});   // dazu der Geschäftswert lt. GNotKG-Rechner
+      const krZahl = t => { const m = /Geschäftswert\s+([\d.]+(?:,\d+)?)/.exec(String(t||"")); return m ? Number(m[1].replace(/\./g,"").replace(",",".")) : 0; };
+      if (kr && krZahl(kr.gw) > 0 && KR_NAME[kr.reiter]) gw.push({t:KR_NAME[kr.reiter]+": Geschäftswert lt. GNotKG-Rechner", w:Math.round(krZahl(kr.gw))});
       if (gegAuswahl().includes("Scheidung") && r.rein > 0) gw.push({t:"Scheidung: Reinvermögen", w:Math.round(r.rein)});
       if (gegAuswahl().includes("Übertragung") && bbApi() && BB_GESAMT.hatErgebnis()){   // Übertragung: Wert des Grundbesitzes zur Wahl
         const w = BB_GESAMT.werte();
@@ -1910,7 +1913,12 @@ function kostenAusPdf(doc){
       }
       window.parent.postMessage({typ:"gw-ergebnis", gw}, "*"); }catch(e){} };
     document.addEventListener("input", ()=>setTimeout(melden, 50)); document.addEventListener("change", ()=>setTimeout(melden, 50));
-    window.addEventListener("message", e=>{ if (e.data && e.data.typ==="gnotkg-grundstuecke-bitte") return; setTimeout(melden, 50); });
+    let krGwLetzt = null;
+    const KR_NAME = {uebertragung:"Übertragung", scheidung:"Scheidung", ehevertrag:"Ehevertrag", testament:"Testament", vollmacht:"Vorsorgevollmacht", kauf:"Kaufvertrag"};
+    window.addEventListener("message", e=>{
+      if (e.data && e.data.typ==="gnotkg-kosten" && e.source===krFrame.contentWindow) krGwLetzt = {reiter:e.data.reiter, gw:e.data.gw};
+      setTimeout(melden, 50); });
+    if (geg && nur==="geschaeftswert") setTimeout(()=>{ if (!krKasten.checked) kostenAn(true); }, 0);   // Rechner gleich mit öffnen
     setInterval(melden, 1500);
   }
   if (nur==="geschaeftswert"){ gwKasten.checked = true; gwKasten.dispatchEvent(new Event("change")); weg(gwKasten.closest("label")); }
