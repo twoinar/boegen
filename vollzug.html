@@ -111,8 +111,13 @@ td input[type=text]{min-width:140px}
 td input.bez{min-width:0;width:118px;font-weight:bold;background:transparent;box-shadow:inset 0 -1px 0 var(--line);padding:4px 2px}
 td input.bez:focus{background:var(--field-focus)}
 .fussnote{font-size:11px;color:var(--muted);margin-top:6px}
+.sub.senk{flex-direction:column;gap:0}
+.gs-ausf{display:grid;grid-template-columns:auto auto auto;gap:0 18px;align-items:center;padding-left:25px}
+.gs-ausf>span{color:var(--muted);grid-row:span 2}
+@media (max-width:640px){.gs-ausf{grid-template-columns:1fr}}
+.kgs-tab{margin:8px 0 0 25px}.kgs-tab table{min-width:620px}.kgs-tab td.l{white-space:normal;font-weight:bold}
 .gs-kauf{margin-top:10px;border-top:1px dashed var(--line);padding-top:6px}
-.gs-reihe{display:grid;grid-template-columns:auto 150px auto minmax(0,1fr);gap:10px;align-items:center;padding-left:25px;margin:4px 0}
+.gs-reihe{display:grid;grid-template-columns:auto 150px;justify-content:start;gap:10px;align-items:center;padding-left:25px;margin:4px 0}
 @media (max-width:640px){.gs-reihe{grid-template-columns:1fr}}
 
 /* Löschungen */
@@ -259,16 +264,20 @@ dialog.mail textarea{min-height:70px}
         <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="anzeige_gutachterausschuss"><span>Anzeige Gutachterausschuss</span></label>
         <label class="cb" data-arten="kauf"><input type="checkbox" data-f="vorkaufsrecht_gemeinde"><span>Vorkaufsrechtsverzichtserklärung Gemeinde</span></label>
         <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
-        <label class="cb" data-arten="uebertragung scheidung"><input type="checkbox" data-f="gb_eigentum"><span>Antrag auf Eigentumsumschreibung beim Grundbuchamt</span></label>
-        <label class="cb" data-arten="uebertragung"><input type="checkbox" data-f="gb_rechte"><span>Eintragung Nießbrauch / Wohnungsrecht</span></label>
-        <label class="cb" data-arten="uebertragung"><input type="checkbox" data-f="gb_rueckauflassung"><span>Eintragung Rückauflassungsvormerkung</span></label>
-        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_ausfertigung"><span>Vollstreckbare Ausfertigung an Gläubiger</span></label>
+        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="gb_eigentum"><span>Antrag auf Eigentumsumschreibung beim Grundbuchamt</span></label>
+        <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_ausfertigung"><span>Ausfertigung / Abschrift an Gläubiger</span></label>
+        <div class="sub senk aufklapp" data-zeigen-wenn="gs_ausfertigung" data-leeren>
+          <label class="cb"><input type="checkbox" data-f="gs_ausf_vollstr"><span>vollstreckbare Ausfertigung</span></label>
+          <label class="cb"><input type="checkbox" data-f="gs_ausf_einfach"><span>einfache Ausfertigung</span></label>
+          <label class="cb"><input type="checkbox" data-f="gs_ausf_begl"><span>beglaubigte Abschrift</span></label>
+          <label class="cb"><input type="checkbox" data-f="gs_ausf_elektr"><span>elektronisch beglaubigte Abschrift</span></label>
+        </div>
         <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_notarbestaetigung"><span>Notarbestätigung an Gläubiger</span></label>
         <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="bank_entlassung"><span>Schuldhaftentlassung durch die Bank</span></label>
         <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="abschrift_gericht"><span>Abschrift an Familiengericht / Rechtsanwälte</span></label>
         <label class="cb" data-arten="ehevertrag"><input type="checkbox" data-f="gueterrechtsregister"><span>Eintragung Güterrechtsregister</span></label>
         <label class="cb" data-arten="scheidung ehevertrag"><input type="checkbox" data-f="ausfertigungen"><span>Ausfertigungen an die Beteiligten</span></label>
-        <label class="cb" data-arten="uebertragung scheidung ehevertrag testament"><input type="checkbox" data-f="ztr"><span>Registrierung Zentrales Testamentsregister</span></label>
+        <label class="cb" data-arten="scheidung ehevertrag testament"><input type="checkbox" data-f="ztr"><span>Registrierung Zentrales Testamentsregister</span></label>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_ag"><span>Ablieferung in die besondere amtliche Verwahrung (Amtsgericht)</span></label>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_notar"><span>Verwahrung beim Notar (Erbvertrag)</span></label>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="hinterlegungsschein"><span>Hinterlegungsschein an Erblasser</span></label>
@@ -293,12 +302,24 @@ dialog.mail textarea{min-height:70px}
     <div class="gs-kauf" id="gsKauf">
       <label class="cb"><input type="checkbox" data-f="kauf_grundschuld"><span><b>Finanzierungsgrundschuld</b> im Anschluss mitbeurkundet</span></label>
       <div class="aufklapp" data-zeigen-wenn="kauf_grundschuld" data-leeren>
-        <div class="gs-reihe"><label for="f_kgsuvz">UVZ-Nr. Grundschuld:</label><input type="text" id="f_kgsuvz" data-f="kgs_uvz" autocomplete="off">
-          <label for="f_kgsgl">Gläubiger:</label><input type="text" id="f_kgsgl" data-f="kgs_glaeubiger"></div>
+        <div class="gs-reihe"><label for="f_kgsuvz">UVZ-Nr. Grundschuld:</label><input type="text" id="f_kgsuvz" data-f="kgs_uvz" autocomplete="off"></div>
+        <div class="gs-ausf"><span>An Gläubiger:</span>
+          <label class="cb"><input type="checkbox" data-f="kgs_ausf_vollstr"><span>vollstreckbare Ausfertigung</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_ausf_einfach"><span>einfache Ausfertigung</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_ausf_begl"><span>beglaubigte Abschrift</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_ausf_elektr"><span>elektronisch beglaubigte Abschrift</span></label>
+        </div>
         <div class="sub">
-          <label class="cb"><input type="checkbox" data-f="kgs_ausfertigung"><span>Vollstreckbare Ausfertigung an Gläubiger</span></label>
           <label class="cb"><input type="checkbox" data-f="kgs_notarbestaetigung"><span>Notarbestätigung an Gläubiger</span></label>
         </div>
+        <div class="tab-wrap kgs-tab"><table>
+          <thead>
+            <tr><th></th><th class="grp" colspan="4">Kopien der Grundschuld</th><th class="grp" colspan="2">Vollzugsschreiben</th><th class="grp" colspan="2">Kostenberechnung</th></tr>
+            <tr><th class="l">Beteiligter</th><th>erteilt<small>(Anzahl)</small></th><th>gewünscht<small>(Anzahl)</small></th>
+              <th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th></tr>
+          </thead>
+          <tbody id="kgsBeteiligte"></tbody>
+        </table></div>
       </div>
     </div>
   </section>
@@ -386,6 +407,28 @@ for (let i=1;i<=6;i++){
     <td class="nodruck weg-zelle">${i===1 ? "" : `<button type="button" class="weg" data-loeschweg="${i}" title="Berechtigten entfernen" aria-label="Löschung ${i} entfernen">×</button>`}</td></tr>`);
 }
 
+/* Finanzierungsgrundschuld beim Kaufvertrag: Kopien/Versand je Beteiligtem (Zeilen folgen Abschnitt 3) */
+const KGS_ROLLEN = ["v1","v2","v3","e1","e2","e3","gl"];
+const kgsTb = document.getElementById("kgsBeteiligte");
+for (const k of KGS_ROLLEN){
+  const cb = (f,t)=>`<td><input type="checkbox" data-f="kgs_${k}_${f}" aria-label="Grundschuld: ${t}"></td>`;
+  kgsTb.insertAdjacentHTML("beforeend",`<tr data-rolle="${k}"><td class="l">${k==="gl" ? "Gläubiger" : ""}</td>
+    <td><input type="number" min="0" step="1" data-f="kgs_${k}_kopien_erteilt" aria-label="Grundschuld: Kopien erteilt"></td>
+    <td><input type="number" min="0" step="1" data-f="kgs_${k}_kopien_gewuenscht" aria-label="Grundschuld: Kopien gewünscht"></td>
+    ${cb("kopie_post","Kopie per Post")}${cb("kopie_email","Kopie per E-Mail")}${cb("vollzug_post","Vollzugsschreiben per Post")}${cb("vollzug_email","Vollzugsschreiben per E-Mail")}
+    ${cb("kostenberechnung_post","Kostenberechnung per Post")}${cb("kostenberechnung_email","Kostenberechnung per E-Mail")}</tr>`);
+}
+const kgsZeile = k => kgsTb.querySelector(`tr[data-rolle="${k}"]`);
+function kgsAbgleichen(){
+  for (const k of KGS_ROLLEN){
+    if (k==="gl") continue;
+    const r = kgsZeile(k), haupt = document.querySelector(`#beteiligte tr[data-rolle="${k}"]`);
+    r.hidden = haupt.hidden;
+    const bez = haupt.querySelector(".bez").value.trim(), name = haupt.querySelector('[data-f$="_name"]').value.trim();
+    r.cells[0].textContent = bez + (name ? ": " + name : "");
+  }
+}
+
 /* ---------- Löschungsbewilligungen dynamisch: erst ein Berechtigter, weitere per Klick ---------- */
 const lzeilen = () => Array.from(lb.rows);
 const lHatInhalt = r => [...r.querySelectorAll("[data-f]")].some(el => el.type==="checkbox" ? el.checked : el.value.trim()!=="");
@@ -446,12 +489,16 @@ const STANDARD_BEZ = new RegExp("^(" + [...new Set(ROLLENNAMEN)].join("|") + ")(
 const zeile = k => tb.querySelector(`tr[data-rolle="${k}"]`);
 const zeileHatInhalt = k => [...zeile(k).querySelectorAll("[data-f]")].some(el => el.type==="checkbox" ? el.checked : (el.value.trim()!=="" && !(el.classList.contains("bez") && STANDARD_BEZ.test(el.value.trim()))));
 function zeileKopieren(von,nach){
+  if (kgsZeile(von) && kgsZeile(nach)) kgsZeile(von).querySelectorAll("[data-f]").forEach(el=>{
+    const ziel = kgsZeile(nach).querySelector(`[data-f="${el.dataset.f.replace("kgs_"+von+"_","kgs_"+nach+"_")}"]`);
+    if (el.type==="checkbox") ziel.checked=el.checked; else ziel.value=el.value;
+  });
   zeile(von).querySelectorAll("[data-f]").forEach(el=>{
     const ziel = zeile(nach).querySelector(`[data-f="${el.dataset.f.replace(von+"_",nach+"_")}"]`);
     if (el.type==="checkbox") ziel.checked=el.checked; else ziel.value=el.value;
   });
 }
-function zeileLeeren(k){ zeile(k).querySelectorAll("[data-f]").forEach(el=>{ if(el.type==="checkbox") el.checked=false; else el.value=""; }); }
+function zeileLeeren(k){ if (kgsZeile(k)) kgsZeile(k).querySelectorAll("[data-f]").forEach(el=>{ if(el.type==="checkbox") el.checked=false; else el.value=""; }); zeile(k).querySelectorAll("[data-f]").forEach(el=>{ if(el.type==="checkbox") el.checked=false; else el.value=""; }); }
 function beteiligteAnzeigen(){
   for (const [g,cfg] of Object.entries(GRUPPEN)){
     const sichtbar = cfg.keys.filter(k=>!zeile(k).hidden);
@@ -464,6 +511,7 @@ function beteiligteAnzeigen(){
     plus.textContent = "+ " + (g==="sonst" ? "sonstiger Beteiligter" : (sichtbar.length ? "weiterer " : "") + cfg.name);
     sichtbar.forEach(k=>{ const w = zeile(k).querySelector("button.weg"); if (w) w.hidden = sichtbar.length <= cfg.min; });
   }
+  kgsAbgleichen();
 }
 function beteiligteZuruecksetzen(ausInhalt){
   for (const cfg of Object.values(GRUPPEN)){
@@ -552,7 +600,7 @@ document.addEventListener("change", e=>{
   if (el.dataset.f==="nachgen_eingeholt_am" && el.value)
     document.querySelector('[data-f="nachgen_bereits_eingeholt"]').checked = true;
 });
-document.addEventListener("input", ()=>{ geaendert = true; });
+document.addEventListener("input", e=>{ geaendert = true; if (e.target.closest("#beteiligte")) kgsAbgleichen(); });
 
 /* Dynamik: Elemente mit data-zeigen-wenn="feld" erscheinen nur, wenn das Kästchen "feld"
    angekreuzt ist ("!feld" = nur wenn nicht angekreuzt). Mit data-leeren werden die Eingaben
@@ -779,6 +827,9 @@ async function pdfErzeugen(){
       for (const kind of s.children){
         if (kind.hidden) continue;
         if (kind.matches("label.cb")){ cbZeile(kind.querySelector("input").checked, kind.textContent.trim(), x0, sb); }
+        else if (kind.matches(".sub.senk")){
+          kind.querySelectorAll("label.cb").forEach(l=>cbZeile(l.querySelector("input").checked, l.textContent.trim(), x0+16, sb-16));
+        }
         else if (kind.matches(".sub")){
           let x=x0+16; const labs=Array.from(kind.querySelectorAll("label.cb"));
           labs.forEach(l=>{ const t=l.textContent.trim(); kaestchen(x, y-9.5, l.querySelector("input").checked); page.drawText(pdfText(t),{x:x+14,y:y-9,size:9,font:fN,color:TEXT}); x+=14+tw(t,fN,9)+18; });
@@ -795,12 +846,33 @@ async function pdfErzeugen(){
     if (art()==="kauf"){
       y-=4; cbZeile(v("kauf_grundschuld"), "Finanzierungsgrundschuld im Anschluss mitbeurkundet", ML, BW, {fett:true});
       if (v("kauf_grundschuld")){
-        const teile=[]; if (v("kgs_uvz")) teile.push("UVZ-Nr. Grundschuld: "+v("kgs_uvz")); if (v("kgs_glaeubiger")) teile.push("Gläubiger: "+v("kgs_glaeubiger"));
-        if (teile.length) text(teile.join("   ·   "),{x:ML+16,max:BW-16});
-        platz(14); let x=ML+16;
-        [["kgs_ausfertigung","Vollstreckbare Ausfertigung an Gläubiger"],["kgs_notarbestaetigung","Notarbestätigung an Gläubiger"]].forEach(([f,t])=>{
-          kaestchen(x, y-9.5, v(f)); page.drawText(pdfText(t),{x:x+14,y:y-9,size:9,font:fN,color:TEXT}); x+=14+tw(t,fN,9)+24; });
-        y-=15;
+        if (v("kgs_uvz")) text("UVZ-Nr. Grundschuld: "+v("kgs_uvz"),{x:ML+16,max:BW-16});
+        platz(44);
+        page.drawText("An Gläubiger:",{x:ML+16,y:y-9,size:9,font:fN,color:GRAU});
+        [["kgs_ausf_vollstr","vollstreckbare Ausfertigung"],["kgs_ausf_einfach","einfache Ausfertigung"],["kgs_ausf_begl","beglaubigte Abschrift"],["kgs_ausf_elektr","elektronisch beglaubigte Abschrift"]].forEach(([f,t],i)=>{
+          const x = ML+86 + (i%2)*190, yy = y - Math.floor(i/2)*13;
+          kaestchen(x, yy-9.5, v(f)); page.drawText(pdfText(t),{x:x+14,y:yy-9,size:9,font:fN,color:TEXT}); });
+        y-=27;
+        kaestchen(ML+16, y-9.5, v("kgs_notarbestaetigung")); page.drawText(pdfText("Notarbestätigung an Gläubiger"),{x:ML+30,y:y-9,size:9,font:fN,color:TEXT});
+        y-=19;
+        // Kopien/Versand zur Grundschuld
+        const sp=[{t:"Beteiligter",w:197,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:"Post",w:36},{t:"E-Mail",w:36},{t:"Post",w:36},{t:"E-Mail",w:38}];
+        const xs=[]; let x=ML+16; for (const c of sp){ xs.push(x); x+=c.w-2; }
+        platz(60);
+        const grp=(t,a,b)=>{ const x0=xs[a], x1=xs[b]+sp[b].w-2; page.drawText(pdfText(t),{x:(x0+x1)/2-tw(t,fB,7)/2,y:y-8,size:7,font:fB,color:BLAU}); page.drawLine({start:{x:x0+2,y:y-11},end:{x:x1-2,y:y-11},thickness:.5,color:LINIE}); };
+        grp("Kopien der Grundschuld",1,4); grp("Vollzugsschreiben",5,6); grp("Kostenberechnung",7,8); y-=14;
+        sp.forEach((c,i)=>{ const tx=pdfText(c.t); page.drawText(tx,{x: c.l ? xs[i]+2 : xs[i]+(c.w-2-tw(tx,fB,7))/2, y:y-8, size:7, font:fB, color:GRAU}); });
+        y-=13; page.drawLine({start:{x:ML+16,y},end:{x:W-MR,y},thickness:.6,color:LINIE});
+        for (const r of Array.from(kgsTb.rows).filter(r=>!r.hidden)){
+          const k=r.dataset.rolle, g=n=>v(`kgs_${k}_${n}`), bez=umbrechen(r.cells[0].textContent.trim(),fB,8.5,sp[0].w-6), h=bez.length*11+8;
+          platz(h);
+          bez.forEach((z,i)=>page.drawText(z,{x:xs[0]+2,y:y-12-i*11,size:8.5,font:fB,color:TEXT}));
+          [["kopien_erteilt",1],["kopien_gewuenscht",2]].forEach(([f,i])=>{ const t=pdfText(g(f)); if (t) page.drawText(t,{x:xs[i]+(sp[i].w-2-tw(t,fN,9))/2,y:y-12,size:9,font:fN,color:TEXT}); });
+          [["kopie_post",3],["kopie_email",4],["vollzug_post",5],["vollzug_email",6],["kostenberechnung_post",7],["kostenberechnung_email",8]]
+            .forEach(([f,i])=>kaestchen(xs[i]+(sp[i].w-2-9)/2, y-13, g(f)));
+          y-=h; page.drawLine({start:{x:ML+16,y},end:{x:W-MR,y},thickness:.5,color:LINIE});
+        }
+        y-=6;
       }
     }
   }
