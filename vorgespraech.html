@@ -1894,6 +1894,16 @@ function kostenAusPdf(doc){
   /* Reihenfolge: gewünschtes Modul zuerst */
   const erstes = document.getElementById(MOD.zeigen[0]); if (erstes) titel.after(erstes);
   if (nur==="erbspiegel"){ esKasten.checked = true; esKasten.dispatchEvent(new Event("change")); weg(esKasten.closest("label")); }
+  /* Vorbelegung des Gegenstands, z. B. aus dem Vollzugsbogen: ?nur=geschaeftswert&geg=Testament */
+  const geg = new URLSearchParams(location.search).get("geg");
+  if (geg && GEGENSTAENDE.includes(geg)){ gegFeld.value = geg; gegenstandAnzeigen(); }
+  /* im Fenster eines anderen Bogens: Ergebnis laufend an diesen melden */
+  if (window.parent !== window){
+    const melden = () => { try{ window.parent.postMessage({typ:"gw-ergebnis", gw:gwVermoegen().gw.map(x=>({t:x.t, w:Math.round(x.w)}))}, "*"); }catch(e){} };
+    document.addEventListener("input", ()=>setTimeout(melden, 50)); document.addEventListener("change", ()=>setTimeout(melden, 50));
+    window.addEventListener("message", e=>{ if (e.data && e.data.typ==="gnotkg-grundstuecke-bitte") return; setTimeout(melden, 50); });
+    setInterval(melden, 1500);
+  }
   if (nur==="geschaeftswert"){ gwKasten.checked = true; gwKasten.dispatchEvent(new Event("change")); weg(gwKasten.closest("label")); }
   if (nur==="bewertung"){ gwKasten.checked = true; gwKasten.dispatchEvent(new Event("change")); weg(gwKasten.closest("label")); bewertungAn(); }
   if (nur==="kosten"){ krKasten.checked = true; krKasten.dispatchEvent(new Event("change")); weg(krKasten.closest("label")); }

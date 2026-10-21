@@ -70,6 +70,11 @@ input[type=checkbox]:checked::after{content:"";width:9px;height:5px;border-left:
 .feldzeile{display:grid;grid-template-columns:80px minmax(0,1fr) auto 100px minmax(0,1.2fr);gap:10px;align-items:center}
 .feldzeile .l2{justify-self:end}
 .artzeile{display:grid;grid-template-columns:80px minmax(0,1fr);gap:10px;align-items:center;margin-bottom:10px}
+.gw-feld{display:flex;gap:8px;align-items:center;max-width:520px}.gw-feld input{max-width:200px;text-align:right}
+dialog.gw{width:min(1100px,96vw);height:90vh;padding:0;border:0;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+dialog.gw form{display:flex;flex-direction:column;height:100%}dialog.gw iframe{flex:1;border:0;width:100%}
+dialog.gw .knoepfe{display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+dialog.gw .knoepfe span{margin-right:auto;font-size:13px}
 select{font:inherit;font-size:14px;font-weight:bold;color:var(--blue);background:var(--field);border:0;border-radius:2px;padding:6px 7px;width:100%;max-width:320px;cursor:pointer}
 label.cb{display:flex;gap:9px;align-items:center;cursor:pointer;padding:4px 0}
 
@@ -211,6 +216,9 @@ dialog.mail textarea{min-height:70px}
         <option value="testament">Testament / Erbvertrag</option>
         <option value="vorsorge">Vorsorgevollmacht</option>
       </select></div>
+    <div class="artzeile" id="gwZeile"><label for="f_gw">Geschäftswert:</label>
+      <div class="gw-feld"><input type="text" id="f_gw" data-f="geschaeftswert" inputmode="decimal" autocomplete="off" placeholder="von Hand eintragen oder ermitteln"><span>€</span>
+        <button type="button" id="btnGw" class="nodruck">Geschäftswert ermitteln</button></div></div>
     <div class="feldzeile"><label for="f_uvz">UVZ-Nr.:</label>
       <input type="text" id="f_uvz" data-f="uvz_nr" autocomplete="off">
       <label class="cb"><input type="checkbox" data-f="cb_papierurkunde"><span>Papierurkunde</span></label>
@@ -295,6 +303,9 @@ dialog.mail textarea{min-height:70px}
           <label class="cb"><input type="checkbox" data-f="abschrift_erbl_post"><span>per Post</span></label>
         </div>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="zvr"><span>Registrierung Zentrales Vorsorgeregister</span></label>
+        <div class="sub aufklapp" data-zeigen-wenn="zvr" data-leeren>
+          <label class="cb"><input type="checkbox" data-f="zvr_inhalt"><span>mit Übermittlung des Vollmachtsinhalts</span></label>
+        </div>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_vollmachtgeber"><span>Ausfertigung an Vollmachtgeber</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_bevollmaechtigte"><span>Ausfertigungen an Bevollmächtigte</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_zurueckhalten"><span>Ausfertigungen erst auf Anweisung des Vollmachtgebers erteilen</span></label>
@@ -356,6 +367,15 @@ dialog.mail textarea{min-height:70px}
 
   <footer class="fuss">Notar Thomas Woinar · Vollzugsbogen</footer>
 </main>
+
+<dialog class="gw nodruck" id="gwDialog">
+  <form method="dialog">
+    <iframe id="gwFrame" title="Geschäftswert ermitteln"></iframe>
+    <div class="knoepfe"><span id="gwErg">Noch kein Geschäftswert berechnet.</span>
+      <button type="button" id="gwAbbrechen">Schließen</button>
+      <button type="button" class="primary" id="gwOk" disabled>Wert übernehmen</button></div>
+  </form>
+</dialog>
 
 <dialog class="mail nodruck" id="mailDialog">
   <form method="dialog" id="mailForm">
@@ -484,8 +504,8 @@ const ARTEN = {
   grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Erwerber",0],          makler:["Gläubiger",1], loesch:true },
   scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:null, loesch:true },
   ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false },
-  testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false },
-  vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false },
+  testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false, gw:"Testament" },
+  vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false, gw:"Vorsorgevollmacht" },
 };
 const artWahl = () => document.querySelector('[data-f="urkundsart"]');
 const art = () => ARTEN[artWahl().value] ? artWahl().value : "kauf";
@@ -578,12 +598,14 @@ function artAnwenden(nachfragen){
   gruppenSetzen();
   const wegZeilen = Object.values(GRUPPEN).filter(g=>g.aus).flatMap(g=>g.keys).filter(k=>!zeile(k).hidden || zeileHatInhalt(k));
   if (nachfragen){
-    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (a!=="kauf" && istAn("kauf_grundschuld")) || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
+    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (a!=="kauf" && istAn("kauf_grundschuld")) || (cfg.gw !== (ARTEN[artVorher]||{}).gw && document.getElementById("f_gw").value.trim()!=="") || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
     if (verlust && !confirm(`Für „${cfg.name}“ entfallen Angaben, die schon eingetragen sind (Vollzugsschritte, Beteiligte oder Löschungen). Diese werden gelöscht. Fortfahren?`)) return false;
   }
   wegSchritte.forEach(l=>{ l.querySelector("input").checked = false; });
   wegZeilen.forEach(zeileLeeren);
   document.querySelectorAll(".schritte [data-arten]").forEach(l=>{ l.hidden = !l.dataset.arten.split(" ").includes(a); });
+  if (nachfragen && cfg.gw !== (ARTEN[artVorher]||{}).gw) document.getElementById("f_gw").value = "";
+  document.getElementById("gwZeile").hidden = !cfg.gw;
   const gk = document.getElementById("gsKauf");
   if (a!=="kauf") leeren(gk);
   gk.hidden = a!=="kauf";
@@ -595,6 +617,30 @@ function artAnwenden(nachfragen){
   return true;
 }
 let artVorher = "kauf";
+
+/* ---------- Geschäftswert (Testament, Vorsorgevollmacht): von Hand oder über das Geschäftswert-Modul ---------- */
+const GW_MODUL = (location.hostname.endsWith("github.io") ? "vorgespraech.html" : "https://twoinar.github.io/boegen/vorgespraech.html") + "?nur=geschaeftswert&geg=";
+const gwDialog = document.getElementById("gwDialog"), gwFrame = document.getElementById("gwFrame");
+let gwWert = null;
+const gwFmt = n => n.toLocaleString("de-DE",{maximumFractionDigits:2});
+document.getElementById("btnGw").onclick = ()=>{
+  const g = ARTEN[art()].gw; if (!g) return;
+  gwWert = null; document.getElementById("gwOk").disabled = true; document.getElementById("gwErg").textContent = "Noch kein Geschäftswert berechnet.";
+  if (gwFrame.dataset.geg !== g){ gwFrame.src = GW_MODUL + encodeURIComponent(g); gwFrame.dataset.geg = g; }
+  gwDialog.showModal();
+};
+document.getElementById("gwAbbrechen").onclick = ()=>gwDialog.close();
+document.getElementById("gwOk").onclick = ()=>{
+  if (gwWert==null) return;
+  document.getElementById("f_gw").value = gwFmt(gwWert); geaendert = true; gwDialog.close();
+};
+window.addEventListener("message", e=>{
+  const d = e.data; if (!d || d.typ!=="gw-ergebnis" || e.source!==gwFrame.contentWindow) return;
+  const g = ARTEN[art()].gw, x = (d.gw||[]).find(x=>g && String(x.t).includes(g));
+  gwWert = x && x.w>0 ? x.w : null;
+  document.getElementById("gwOk").disabled = gwWert==null;
+  document.getElementById("gwErg").textContent = gwWert==null ? "Noch kein Geschäftswert berechnet." : `${x.t}: ${gwFmt(gwWert)} €`;
+});
 document.addEventListener("change", e=>{
   if (e.target!==artWahl()) return;
   if (!artAnwenden(true)){ artWahl().value = artVorher; gruppenSetzen(); return; }
@@ -763,7 +809,10 @@ async function pdfErzeugen(){
   // 1 Urkunde
   ueberschrift("1","Urkunde");
   { page.drawText("Urkundsart:",{x:ML,y:y-9.5,size:9.5,font:fN,color:GRAU});
-    page.drawText(pdfText(ARTEN[art()].name),{x:ML+60,y:y-10.5,size:10.5,font:fB,color:BLAU}); y-=17; }
+    page.drawText(pdfText(ARTEN[art()].name),{x:ML+60,y:y-10.5,size:10.5,font:fB,color:BLAU});
+    if (ARTEN[art()].gw && v("geschaeftswert")){ const t=v("geschaeftswert")+" €", xr=W-MR-tw(t,fB,10.5);
+      page.drawText(t,{x:xr,y:y-10.5,size:10.5,font:fB,color:TEXT}); page.drawText("Geschäftswert:",{x:xr-tw("Geschäftswert:",fN,9.5)-8,y:y-9.5,size:9.5,font:fN,color:GRAU}); }
+    y-=17; }
   { const s=9.5; let x=ML;
     page.drawText("UVZ-Nr.:",{x,y:y-s,size:s,font:fN,color:GRAU}); x+=48;
     const uvz=pdfText(v("uvz_nr")||"—"); page.drawText(uvz,{x,y:y-s,size:10.5,font:fB,color:TEXT}); x+=Math.max(110, tw(uvz,fB,10.5)+18);
@@ -1081,6 +1130,7 @@ function mailText(notiz){
   if (notiz.trim()) z.push("", notiz.trim());
   z.push("");
   z.push("Urkundsart:   "+ARTEN[art()].name);
+  if (ARTEN[art()].gw && document.getElementById("f_gw").value.trim()) z.push("Geschäftswert: "+document.getElementById("f_gw").value.trim()+" €");
   if (uvz) z.push("UVZ-Nr.:      "+uvz);
   if (vorgangWert()) z.push("Vorgangs-Nr.: "+vorgangWert());
   if (art()==="kauf" && istAn("kauf_grundschuld")) z.push("Grundschuld:  mitbeurkundet" + (document.querySelector('[data-f="kgs_uvz"]').value.trim() ? ", UVZ-Nr. "+document.querySelector('[data-f="kgs_uvz"]').value.trim() : ""));
