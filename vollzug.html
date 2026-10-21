@@ -524,8 +524,8 @@ const ARTEN = {
   kauf:         { name:"Kaufvertrag",            v:["Veräußerer",1], e:["Erwerber",1],          makler:["Makler",0],  loesch:true },
   uebertragung: { name:"Übertragungsvertrag",    v:["Übergeber",1],  e:["Übernehmer",1],        makler:null, loesch:true, gw:"Übertragung" },
   grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Erwerber",0],          makler:["Gläubiger",1], loesch:true },
-  scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:null, loesch:true },
-  ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false },
+  scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:null, loesch:true, gw:"Scheidung" },
+  ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false, gw:"Ehevertrag" },
   testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false, gw:"Testament" },
   vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false, gw:"Vorsorgevollmacht" },
 };

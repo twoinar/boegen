@@ -1900,7 +1900,8 @@ function kostenAusPdf(doc){
   /* im Fenster eines anderen Bogens: Ergebnis laufend an diesen melden */
   if (window.parent !== window){
     const melden = () => { try{
-      const gw = gwVermoegen().gw.map(x=>({t:x.t, w:Math.round(x.w)}));
+      const r = gwVermoegen(), gw = r.gw.map(x=>({t:x.t, w:Math.round(x.w)}));
+      if (gegAuswahl().includes("Scheidung") && r.rein > 0) gw.push({t:"Scheidung: Reinvermögen", w:Math.round(r.rein)});
       if (gegAuswahl().includes("Übertragung") && bbApi() && BB_GESAMT.hatErgebnis()){   // Übertragung: Wert des Grundbesitzes zur Wahl
         const w = BB_GESAMT.werte();
         if (w.vw) gw.push({t:"Übertragung: Verkehrswert Grundbesitz", w:Math.round(w.vw)});
