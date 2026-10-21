@@ -223,6 +223,7 @@ dialog.mail textarea{min-height:70px}
         <option value="ehevertrag">Ehevertrag</option>
         <option value="testament">Testament / Erbvertrag</option>
         <option value="vorsorge">Vorsorgevollmacht</option>
+        <option value="nachlass">Nachlassverzeichnis</option>
       </select></div>
     <div class="artzeile" id="gwZeile"><label for="f_gw">Geschäftswert:</label>
       <div class="gw-feld"><input type="text" id="f_gw" data-f="geschaeftswert" inputmode="decimal" autocomplete="off" placeholder="von Hand eintragen oder ermitteln"><span>€</span>
@@ -528,6 +529,7 @@ const ARTEN = {
   ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false, gw:"Ehevertrag" },
   testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false, gw:"Testament" },
   vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false, gw:"Vorsorgevollmacht" },
+  nachlass:     { name:"Nachlassverzeichnis",    v:["Erbe",1],       e:["Pflichtteilsberechtigter",1], makler:null, loesch:false, gw:"Nachlassverzeichnis", kr:"nachlass" },
 };
 const artWahl = () => document.querySelector('[data-f="urkundsart"]');
 const art = () => ARTEN[artWahl().value] ? artWahl().value : "kauf";
@@ -648,7 +650,8 @@ const gwFmt = n => n.toLocaleString("de-DE",{maximumFractionDigits:2});
 document.getElementById("btnGw").onclick = ()=>{
   const g = ARTEN[art()].gw; if (!g) return;
   gwWert = null; gwListe = []; gwWahl = 0; document.getElementById("gwOk").disabled = true; document.getElementById("gwErg").textContent = "Noch kein Geschäftswert berechnet.";
-  if (gwFrame.dataset.geg !== g){ gwFrame.src = GW_MODUL + encodeURIComponent(g); gwFrame.dataset.geg = g; }
+  const kr = ARTEN[art()].kr;   // Geschäftswert direkt aus dem GNotKG-Rechner (Reiter ohne eigenes Ermittlungsmodul)
+  if (gwFrame.dataset.geg !== g){ gwFrame.src = kr ? "https://twoinar.github.io/kostenrechner/#" + kr + "?einbetten=1" : GW_MODUL + encodeURIComponent(g); gwFrame.dataset.geg = g; }
   gwDialog.showModal();
 };
 document.getElementById("gwAbbrechen").onclick = ()=>gwDialog.close();
@@ -658,8 +661,14 @@ document.getElementById("gwOk").onclick = ()=>{
 };
 let gwListe = [], gwWahl = 0;
 window.addEventListener("message", e=>{
-  const d = e.data; if (!d || d.typ!=="gw-ergebnis" || e.source!==gwFrame.contentWindow) return;
-  const g = ARTEN[art()].gw, liste = (d.gw||[]).filter(x=>g && String(x.t).includes(g) && x.w>0);
+  let d = e.data; if (!d || e.source!==gwFrame.contentWindow) return;
+  const cfg = ARTEN[art()];
+  if (d.typ==="gnotkg-kosten" && cfg.kr && d.reiter===cfg.kr){       // Meldung des Rechners: „Geschäftswert 300.000,00 €“
+    const m = /Geschäftswert\s+([\d.]+(?:,\d+)?)/.exec(String(d.gw||""));
+    d = {typ:"gw-ergebnis", gw: m ? [{t:cfg.gw+": Geschäftswert lt. GNotKG-Rechner", w:Math.round(Number(m[1].replace(/\./g,"").replace(",",".")))}] : []};
+  }
+  if (d.typ!=="gw-ergebnis") return;
+  const g = cfg.gw, liste = (d.gw||[]).filter(x=>g && String(x.t).includes(g) && x.w>0);
   if (JSON.stringify(liste)===JSON.stringify(gwListe)) return;
   gwListe = liste; if (gwWahl >= liste.length) gwWahl = 0;
   const erg = document.getElementById("gwErg");
