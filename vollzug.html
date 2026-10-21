@@ -1169,8 +1169,8 @@ document.getElementById("btnAblegen").onclick = ()=>ablegen().catch(fehler);
 document.getElementById("btnOeffnen").onclick = ()=>oeffnen().catch(fehler);
 document.getElementById("btnNeu").onclick = neu;
 document.getElementById("btnVersand").onclick = ()=>versandUebernehmen(false).catch(fehler);
-// Neuer Bogen: liegt zur eingetragenen UVZ-Nr. schon ein Versand vor, darauf hinweisen (übernommen wird erst
-// nach Klick, damit die Namen vorher eingetragen sind und die Zuordnung klappt)
+// Neuer Bogen: liegt zur eingetragenen UVZ-Nr. schon ein Versand vor, wird er übernommen (samt Namen), solange
+// noch keine Namen eingetragen sind; sonst nur Hinweis
 document.querySelector('[data-f="uvz_nr"]').addEventListener("change", ()=>versandPruefen().catch(()=>{}));
 async function versandPruefen(){
   if (!dateisystemOk || !ordner || !uvzWert()) return;
@@ -1179,7 +1179,9 @@ async function versandPruefen(){
   const erledigt = new Set(document.querySelector('[data-f="versand_uebernommen"]').value.split("|").filter(Boolean));
   for await (const [name, h] of ordner.entries())
     if (h.kind==="file" && name.startsWith(praefix) && !erledigt.has(name)){
-      meldung(`Zu UVZ-Nr. ${uvzWert()} liegt ein Versand aus dem Verteilerzettel vor. Erst die Beteiligten eintragen, dann „Versand übernehmen“ klicken.`);
+      // noch keine Namen: alles aus dem Verteilerzettel übernehmen; sonst nur Hinweis, damit nichts überschrieben wird
+      if (keineNamen()) return versandUebernehmen(true);
+      meldung(`Zu UVZ-Nr. ${uvzWert()} liegt ein Versand aus dem Verteilerzettel vor. Mit „Versand übernehmen“ eintragen.`);
       return;
     }
 }
@@ -1208,6 +1210,29 @@ function freieZeile(name){
   document.querySelector(`[data-f="${k}_name"]`).value = name;
   return zeile(k);
 }
+// Ist im Bogen noch kein Name eingetragen, kommen die Beteiligten aus dem Verteilerzettel: Rolle Veräußerer/Erwerber
+// in ihre Zeilen, „Beteiligter“ (oder ohne Rolle) unter Sonstige, „nicht Beteiligter“ entfällt. Reichen die Zeilen
+// einer Gruppe nicht, stehen die übrigen Namen mit Komma in der letzten Zeile.
+const keineNamen = () => [...tb.querySelectorAll("tr")].every(tr=>!document.querySelector(`[data-f="${tr.dataset.rolle}_name"]`).value.trim());
+function namenAusVerteiler(liste){
+  const gruppe = r => { r=(r||"").toLowerCase();
+    if (r.includes("nicht")) return null;
+    if (r.includes("veräu") || r.includes("verkäu")) return "v";
+    if (r.includes("erwerb") || r.includes("käufer")) return "e";
+    return "sonst"; };
+  const nachGruppe = {v:[], e:[], sonst:[]};
+  for (const b of liste||[]){ const g = gruppe(b.rolle); if (g) nachGruppe[g].push(b.name); }
+  for (const [g, namen] of Object.entries(nachGruppe)){
+    if (!namen.length) continue;
+    const keys = GRUPPEN[g].keys;
+    namen.forEach((n,i)=>{
+      const k = keys[Math.min(i, keys.length-1)], el = document.querySelector(`[data-f="${k}_name"]`);
+      zeile(k).hidden = false;
+      el.value = i < keys.length ? n : el.value + ", " + n;
+    });
+  }
+  beteiligteAnzeigen();
+}
 const deDatum = iso => { const [j,m,t] = iso.slice(0,10).split("-"); return `${t}.${m}.${j}`; };
 async function versandUebernehmen(still){
   const uvz = uvzWert();
@@ -1230,6 +1255,7 @@ async function versandUebernehmen(still){
   for (const [name, h] of dateien){
     let d; try { d = JSON.parse(await (await h.getFile()).text()); } catch { continue; }
     if (d.art!=="WoinarVersand") continue;
+    if (keineNamen() && d.beteiligte && d.beteiligte.length) namenAusVerteiler(d.beteiligte);
     const tag = deDatum(d.zeit||new Date().toISOString());
     for (const e of d.eintraege||[]){
       const tr = zeileFuerName(e.name) || freieZeile(e.name);
