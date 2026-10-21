@@ -301,7 +301,6 @@ dialog.mail textarea{min-height:70px}
         </div>
       </div>
     </div>
-    <p class="fussnote" id="ubNote">UB = Unbedenklichkeitsbescheinigung</p>
   </section>
 
   <section id="loeschBereich">
@@ -532,7 +531,6 @@ function artAnwenden(nachfragen){
   if (wegLoesch){ leeren(lb5); }
   lb5.hidden = wegLoesch;
   document.getElementById("nrBem").textContent = wegLoesch ? "5" : "6";
-  document.getElementById("ubNote").hidden = !document.querySelector('.schritte [data-f="anzeige_grest"]').closest("label").dataset.arten.split(" ").includes(a);
   schritteVerteilen();
   return true;
 }
@@ -805,7 +803,6 @@ async function pdfErzeugen(){
         y-=15;
       }
     }
-    if (!document.getElementById("ubNote").hidden) text("UB = Unbedenklichkeitsbescheinigung",{s:7.5,c:GRAU});
   }
 
   // 5 Löschungsbewilligungen
