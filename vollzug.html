@@ -120,6 +120,7 @@ td input.bez:focus{background:var(--field-focus)}
 .gs-ausf{display:grid;grid-template-columns:auto auto auto;gap:0 18px;align-items:center;padding-left:25px}
 .gs-ausf>span{color:var(--muted);grid-row:span 2}
 @media (max-width:640px){.gs-ausf{grid-template-columns:1fr}}
+.kgs-gen{padding-left:50px}
 .kgs-tab{margin:8px 0 0 25px}.kgs-tab table{min-width:620px}.kgs-tab td.l{white-space:normal;font-weight:bold}
 .gs-kauf{margin-top:10px;border-top:1px dashed var(--line);padding-top:6px}
 .gs-reihe{display:grid;grid-template-columns:auto 150px;justify-content:start;gap:10px;align-items:center;padding-left:25px;margin:4px 0}
@@ -271,7 +272,6 @@ dialog.mail textarea{min-height:70px}
         <label class="cb" data-arten="kauf uebertragung scheidung ehevertrag"><input type="checkbox" data-f="anzeige_schenkungsteuer"><span>Anzeige Finanzamt Schenkungsteuer</span></label>
         <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="anzeige_gutachterausschuss"><span>Anzeige Gutachterausschuss</span></label>
         <label class="cb" data-arten="kauf"><input type="checkbox" data-f="vorkaufsrecht_gemeinde"><span>Vorkaufsrechtsverzichtserklärung Gemeinde</span></label>
-        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
         <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_ausfertigung"><span>Ausfertigung / Abschrift an Gläubiger</span></label>
         <div class="sub senk aufklapp" data-zeigen-wenn="gs_ausfertigung" data-leeren>
           <label class="cb"><input type="checkbox" data-f="gs_ausf_vollstr"><span>vollstreckbare Ausfertigung</span></label>
@@ -288,14 +288,6 @@ dialog.mail textarea{min-height:70px}
         <label class="cb" data-arten="ehevertrag"><input type="checkbox" data-f="gueterrechtsregister"><span>Eintragung Güterrechtsregister</span></label>
         <label class="cb" data-arten="ehevertrag"><input type="checkbox" data-f="ausfertigungen"><span>Ausfertigungen an die Beteiligten</span></label>
         <label class="cb" data-arten="scheidung ehevertrag testament"><input type="checkbox" data-f="ztr"><span>Registrierung Zentrales Testamentsregister</span></label>
-        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="sg_genehmigung"><span>Genehmigungen / Zustimmungen</span></label>
-        <div class="sub senk aufklapp" data-zeigen-wenn="sg_genehmigung" data-leeren>
-          <label class="cb"><input type="checkbox" data-f="sg_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
-          <label class="cb"><input type="checkbox" data-f="sg_zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
-          <label class="cb"><input type="checkbox" data-f="sg_zust_verwalter"><span>Zustimmung des Verwalters</span></label>
-          <label class="cb"><input type="checkbox" data-f="sg_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
-          <label class="cb"><input type="checkbox" data-f="sg_familiengericht"><span>Genehmigung Familiengericht</span></label>
-        </div>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_ag"><span>Ablieferung in die besondere amtliche Verwahrung (Amtsgericht)</span></label>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="abschrift_erblasser"><span>Beglaubigte Abschrift an Testator</span></label>
         <div class="sub aufklapp" data-zeigen-wenn="abschrift_erblasser" data-leeren>
@@ -309,13 +301,17 @@ dialog.mail textarea{min-height:70px}
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_vollmachtgeber"><span>Ausfertigung an Vollmachtgeber</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_bevollmaechtigte"><span>Ausfertigungen an Bevollmächtigte</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_zurueckhalten"><span>Ausfertigungen erst auf Anweisung des Vollmachtgebers erteilen</span></label>
-        <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
-        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="zust_verwalter"><span>Zustimmung des Verwalters</span></label>
-        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_sanierung"><span>Sanierungsrechtliche Genehmigung</span></label>
-        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_entwicklung"><span>Entwicklungsrechtliche Genehmigung</span></label>
-        <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
-        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_nachlassgericht"><span>Genehmigung Nachlassgericht</span></label>
-        <label class="cb" data-arten="kauf uebertragung grundschuld ehevertrag"><input type="checkbox" data-f="gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung ehevertrag"><input type="checkbox" data-f="gen_sammel"><span>Genehmigungen / Zustimmungen</span></label>
+        <div class="sub senk aufklapp" data-zeigen-wenn="gen_sammel" data-leeren>
+          <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
+          <label class="cb" data-arten="kauf uebertragung grundschuld scheidung"><input type="checkbox" data-f="zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
+          <label class="cb" data-arten="kauf uebertragung scheidung grundschuld"><input type="checkbox" data-f="zust_verwalter"><span>Zustimmung des Verwalters</span></label>
+          <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="gen_sanierung"><span>Sanierungsrechtliche Genehmigung</span></label>
+          <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="gen_entwicklung"><span>Entwicklungsrechtliche Genehmigung</span></label>
+          <label class="cb" data-arten="kauf uebertragung grundschuld scheidung"><input type="checkbox" data-f="gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
+          <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="gen_nachlassgericht"><span>Genehmigung Nachlassgericht</span></label>
+          <label class="cb" data-arten="kauf uebertragung grundschuld scheidung ehevertrag"><input type="checkbox" data-f="gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
+        </div>
       </div>
       <div>
         <div class="sonst"><label class="cb"><input type="checkbox" data-f="sonstiges_vollzug"><span>Sonstiges:</span></label>
@@ -334,6 +330,16 @@ dialog.mail textarea{min-height:70px}
         </div>
         <div class="sub">
           <label class="cb"><input type="checkbox" data-f="kgs_notarbestaetigung"><span>Notarbestätigung an Gläubiger</span></label>
+        </div>
+        <div class="sub"><label class="cb"><input type="checkbox" data-f="kgs_gen"><span>Genehmigungen / Zustimmungen zur Grundschuld</span></label></div>
+        <div class="sub senk aufklapp kgs-gen" data-zeigen-wenn="kgs_gen" data-leeren>
+          <label class="cb"><input type="checkbox" data-f="kgs_zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_zust_verwalter"><span>Zustimmung des Verwalters</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_gen_sanierung"><span>Sanierungsrechtliche Genehmigung</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_gen_entwicklung"><span>Entwicklungsrechtliche Genehmigung</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_gen_nachlassgericht"><span>Genehmigung Nachlassgericht</span></label>
+          <label class="cb"><input type="checkbox" data-f="kgs_gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
         </div>
         <div class="tab-wrap kgs-tab"><table>
           <thead>
@@ -889,7 +895,7 @@ async function pdfErzeugen(){
         if (kind.hidden) continue;
         if (kind.matches("label.cb")){ cbZeile(kind.querySelector("input").checked, kind.textContent.trim(), x0, sb); }
         else if (kind.matches(".sub.senk")){
-          kind.querySelectorAll("label.cb").forEach(l=>cbZeile(l.querySelector("input").checked, l.textContent.trim(), x0+16, sb-16));
+          kind.querySelectorAll("label.cb").forEach(l=>!l.hidden && cbZeile(l.querySelector("input").checked, l.textContent.trim(), x0+16, sb-16));
         }
         else if (kind.matches(".sub")){
           let x=x0+16; const labs=Array.from(kind.querySelectorAll("label.cb"));
@@ -915,7 +921,10 @@ async function pdfErzeugen(){
           kaestchen(x, yy-9.5, v(f)); page.drawText(pdfText(t),{x:x+14,y:yy-9,size:9,font:fN,color:TEXT}); });
         y-=27;
         kaestchen(ML+16, y-9.5, v("kgs_notarbestaetigung")); page.drawText(pdfText("Notarbestätigung an Gläubiger"),{x:ML+30,y:y-9,size:9,font:fN,color:TEXT});
-        y-=19;
+        y-=14;
+        cbZeile(v("kgs_gen"), "Genehmigungen / Zustimmungen zur Grundschuld", ML+16, BW-16);
+        if (v("kgs_gen")) [["kgs_zust_eigentuemer","Zustimmung des Grundstückseigentümers"],["kgs_zust_verwalter","Zustimmung des Verwalters"],["kgs_gen_sanierung","Sanierungsrechtliche Genehmigung"],["kgs_gen_entwicklung","Entwicklungsrechtliche Genehmigung"],["kgs_gen_betreuungsgericht","Genehmigung Betreuungsgericht"],["kgs_gen_nachlassgericht","Genehmigung Nachlassgericht"],["kgs_gen_familiengericht","Genehmigung Familiengericht"]].forEach(([f,t])=>cbZeile(v(f), t, ML+32, BW-32));
+        y-=5;
         // Kopien/Versand zur Grundschuld
         const sp=[{t:"Beteiligter",w:197,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:"Post",w:36},{t:"E-Mail",w:36},{t:"Post",w:36},{t:"E-Mail",w:38}];
         const xs=[]; let x=ML+16; for (const c of sp){ xs.push(x); x+=c.w-2; }
@@ -1031,6 +1040,9 @@ async function bogenLaden(bytes, name){
   const roh = doc.getInfoDict().lookup(PDFLib.PDFName.of(DATENSCHLUESSEL));
   if (roh && roh.decodeText){
     const d = JSON.parse(roh.decodeText()), f = d.f || {};
+    const ALT = {sg_genehmigung:"gen_sammel", sg_grdstvg:"gen_grdstvg", sg_zust_eigentuemer:"zust_eigentuemer", sg_zust_verwalter:"zust_verwalter", sg_betreuungsgericht:"gen_betreuungsgericht", sg_familiengericht:"gen_familiengericht"};
+    for (const [a,n] of Object.entries(ALT)) if (f[a]) f[n] = true;
+    if (["gen_grdstvg","zust_eigentuemer","zust_verwalter","gen_sanierung","gen_entwicklung","gen_betreuungsgericht","gen_nachlassgericht","gen_familiengericht"].some(n=>f[n])) f.gen_sammel = true;
     for (const el of felder()){ const w=f[el.dataset.f]; if (el.type==="checkbox") el.checked=!!w; else el.value = w===undefined ? "" : w; }
     if (!ARTEN[artWahl().value]) artWahl().value = "kauf";
     artAnwenden(false); artVorher = art();
