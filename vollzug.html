@@ -272,7 +272,7 @@ dialog.mail textarea{min-height:70px}
     </div>
   </section>
 
-  <section>
+  <section id="schrittBereich">
     <h2><span>4</span><span>Vollzugsschritte</span></h2>
     <div class="schritte">
       <div>
@@ -534,7 +534,7 @@ const ARTEN = {
   testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false, gw:"Testament" },
   vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false, gw:"Vorsorgevollmacht" },
   nachlass:     { name:"Nachlassverzeichnis",    v:["Erbe",1],       e:["Pflichtteilsberechtigter",1], makler:null, loesch:false, gw:"Nachlassverzeichnis", kr:"nachlass",
-                  ohneVz:true, sonst:["Anwalt Erbe","Anwalt Pflichtteilsberechtigter"],
+                  ohneVz:true, ohneNg:true, ohneSchritte:true, sonst:["Anwalt Erbe","Anwalt Pflichtteilsberechtigter"],
                   hinweis:"Dem Pflichtteilsberechtigten und seinem Anwalt wird die Urkunde nur mit Einwilligung des Erben bzw. des Anwalts des Erben übersandt." },
 };
 const artWahl = () => document.querySelector('[data-f="urkundsart"]');
@@ -629,7 +629,7 @@ function artAnwenden(nachfragen){
   gruppenSetzen();
   const wegZeilen = Object.values(GRUPPEN).filter(g=>g.aus).flatMap(g=>g.keys).filter(k=>!zeile(k).hidden || zeileHatInhalt(k));
   if (nachfragen){
-    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (cfg.ohneVz && [...tb.querySelectorAll('td.vz input')].some(c=>c.checked)) || (a!=="kauf" && istAn("kauf_grundschuld")) || (cfg.gw !== (ARTEN[artVorher]||{}).gw && document.getElementById("f_gw").value.trim()!=="") || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
+    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (cfg.ohneNg && istAn("nachgen_erforderlich")) || (cfg.ohneSchritte && hatInhalt(document.getElementById("schrittBereich"))) || (cfg.ohneVz && [...tb.querySelectorAll('td.vz input')].some(c=>c.checked)) || (a!=="kauf" && istAn("kauf_grundschuld")) || (cfg.gw !== (ARTEN[artVorher]||{}).gw && document.getElementById("f_gw").value.trim()!=="") || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
     if (verlust && !confirm(`Für „${cfg.name}“ entfallen Angaben, die schon eingetragen sind (Vollzugsschritte, Beteiligte oder Löschungen). Diese werden gelöscht. Fortfahren?`)) return false;
   }
   wegSchritte.forEach(l=>{ l.querySelector("input").checked = false; });
@@ -646,7 +646,11 @@ function artAnwenden(nachfragen){
   const lb5 = document.getElementById("loeschBereich");
   if (wegLoesch){ leeren(lb5); }
   lb5.hidden = wegLoesch;
-  document.getElementById("nrBem").textContent = wegLoesch ? "5" : "6";
+  const ng = document.getElementById("nachgenehmigung");
+  if (cfg.ohneNg){ leeren(ng); } ng.hidden = !!cfg.ohneNg;
+  const sb = document.getElementById("schrittBereich");
+  if (cfg.ohneSchritte){ leeren(sb); } sb.hidden = !!cfg.ohneSchritte;
+  [...document.querySelectorAll("main.sheet > section")].filter(x=>!x.hidden).forEach((x,i)=>{ x.querySelector("h2 > span").textContent = i+1; });
   schritteVerteilen();
   return true;
 }
@@ -872,8 +876,10 @@ async function pdfErzeugen(){
     page.drawText(lab,{x:xr-tw(lab,fN,s)-8,y:y-s,size:s,font:fN,color:GRAU});
     y-=18; }
 
-  // 2 Nachgenehmigung
-  if (v("nachgen_erforderlich")){
+  // 2 Nachgenehmigung (entfällt z. B. beim Nachlassverzeichnis); Abschnitte fortlaufend nummeriert
+  let nrZ = 1; const nr = () => String(++nrZ);
+  if (ARTEN[art()].ohneNg){}
+  else if (v("nachgen_erforderlich")){ const nr2 = nr();
     const innen=[];
     if (v("nachgen_durch")) innen.push(["Nachgenehmigung durch:", v("nachgen_durch")]);
     const hinweis = v("nachgen_hinweis");
@@ -883,7 +889,7 @@ async function pdfErzeugen(){
     page.drawRectangle({x:ML,y:y-hoehe,width:BW,height:hoehe,color:ROTBG,borderColor:ROT,borderWidth:1.2});
     page.drawRectangle({x:ML,y:y-hoehe,width:5,height:hoehe,color:ROT});
     let yy=y-16;
-    page.drawText("2",{x:ML+14,y:yy,size:10.5,font:fB,color:ROT});
+    page.drawText(nr2,{x:ML+14,y:yy,size:10.5,font:fB,color:ROT});
     page.drawText(pdfText("Nachgenehmigung – vorrangig zu erledigen!"),{x:ML+30,y:yy,size:10.5,font:fB,color:ROT}); yy-=16;
     kaestchen(ML+14, yy-1.5, true);
     page.drawText(pdfText("Ein Beteiligter muss noch nachgenehmigen. Genehmigung als Erstes einholen."),{x:ML+30,y:yy,size:9,font:fB,color:TEXT}); yy-=14;
@@ -895,12 +901,12 @@ async function pdfErzeugen(){
     if (hinweis){ page.drawText("Hinweis:",{x:ML+30,y:yy,size:9,font:fN,color:GRAU}); zlH.forEach(z=>{ page.drawText(z,{x:ML+150,y:yy,size:9,font:fN,color:TEXT}); yy-=12; }); }
     y -= hoehe+4;
   } else {
-    ueberschrift("2","Nachgenehmigung");
+    ueberschrift(nr(),"Nachgenehmigung");
     cbZeile(false, "Ein Beteiligter muss noch nachgenehmigen.", ML, BW);
   }
 
   // 3 Beteiligte
-  ueberschrift("3","Beteiligte, Kopien und Versand");
+  ueberschrift(nr(),"Beteiligte, Kopien und Versand");
   { const ohneVz = !!ARTEN[art()].ohneVz;   // z. B. Nachlassverzeichnis: kein Vollzug, keine Vollzugsschreiben
     const sp=[{t:"Beteiligter",w:ohneVz?128:88,l:1},{t:"Name",w:ohneVz?157:125,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:ohneVz?"":"Post",w:ohneVz?0:36},{t:ohneVz?"":"E-Mail",w:ohneVz?0:36},{t:"Post",w:36},{t:"E-Mail",w:38}];
     const xs=[]; let x=ML; for (const c of sp){ xs.push(x); x+=c.w; }
@@ -928,7 +934,8 @@ async function pdfErzeugen(){
   }
 
   // 4 Vollzugsschritte (zwei Spalten wie im Formular)
-  ueberschrift("4","Vollzugsschritte");
+  if (!ARTEN[art()].ohneSchritte){
+  ueberschrift(nr(),"Vollzugsschritte");
   { const spalten = Array.from(document.querySelectorAll(".schritte > div"));
     const sb = (BW-24)/2;
     // Höhe grob abschätzen, damit beide Spalten auf derselben Seite beginnen
@@ -1008,8 +1015,9 @@ async function pdfErzeugen(){
     }
   }
 
+  }
   // 5 Löschungsbewilligungen
-  if (ARTEN[art()].loesch){ ueberschrift("5","Löschungsbewilligungen");
+  if (ARTEN[art()].loesch){ ueberschrift(nr(),"Löschungsbewilligungen");
   { const zeilen = lzeilen().filter(r=>!r.hidden && lHatInhalt(r));
     if (!v("cb_loeschung") || !zeilen.length) cbZeile(false, "Löschungsbewilligungen erforderlich", ML, BW);
     else {
@@ -1032,7 +1040,7 @@ async function pdfErzeugen(){
 
   }
   // 6 Bemerkungen
-  ueberschrift(ARTEN[art()].loesch ? "6" : "5","Weitere Anweisungen / Bemerkungen");
+  ueberschrift(nr(),"Weitere Anweisungen / Bemerkungen");
   { const b=v("bemerkungen");
     if (b) text(b,{s:9.5});
     else { platz(70); page.drawRectangle({x:ML,y:y-64,width:BW,height:64,color:FELD}); y-=70; } }
