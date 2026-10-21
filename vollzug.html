@@ -1211,17 +1211,18 @@ function freieZeile(name){
   return zeile(k);
 }
 // Ist im Bogen noch kein Name eingetragen, kommen die Beteiligten aus dem Verteilerzettel: Rolle Veräußerer/Erwerber
-// in ihre Zeilen, „Beteiligter“ (oder ohne Rolle) unter Sonstige, „nicht Beteiligter“ entfällt. Reichen die Zeilen
+// in ihre Zeilen, „Beteiligter“, „nicht Beteiligter“ (z. B. Makler) und ohne Rolle unter Sonstige. Reichen die Zeilen
 // einer Gruppe nicht, stehen die übrigen Namen mit Komma in der letzten Zeile.
 const keineNamen = () => [...tb.querySelectorAll("tr")].every(tr=>!document.querySelector(`[data-f="${tr.dataset.rolle}_name"]`).value.trim());
 function namenAusVerteiler(liste){
   const gruppe = r => { r=(r||"").toLowerCase();
-    if (r.includes("nicht")) return null;
     if (r.includes("veräu") || r.includes("verkäu")) return "v";
     if (r.includes("erwerb") || r.includes("käufer")) return "e";
     return "sonst"; };
   const nachGruppe = {v:[], e:[], sonst:[]};
-  for (const b of liste||[]){ const g = gruppe(b.rolle); if (g) nachGruppe[g].push(b.name); }
+  // Urkundsbeteiligte vor den nicht Beteiligten
+  const sortiert = [...(liste||[])].sort((a,b)=>((a.rolle||"").toLowerCase().includes("nicht")) - ((b.rolle||"").toLowerCase().includes("nicht")));
+  for (const b of sortiert) nachGruppe[gruppe(b.rolle)].push(b.name);
   for (const [g, namen] of Object.entries(nachGruppe)){
     if (!namen.length) continue;
     const keys = GRUPPEN[g].keys;
