@@ -236,6 +236,7 @@ dialog.mail textarea{min-height:70px}
       <label class="cb"><input type="checkbox" data-f="cb_papierurkunde"><span>Papierurkunde</span></label>
       <label for="f_vg" class="l2">Vorgangs-Nr.:</label>
       <input type="text" id="f_vg" data-f="vorgang_nr" autocomplete="off"></div>
+    <label class="cb" style="margin-top:6px"><input type="checkbox" data-f="cb_kr_angelegt"><span>Kostenrechnung bereits im Vorgang angelegt</span></label>
   </section>
 
   <section class="alarm" id="nachgenehmigung">
@@ -874,6 +875,8 @@ async function pdfErzeugen(){
     const vg=pdfText(v("vorgang_nr")||"—"), lab="Vorgangs-Nr.:";
     const xr = W-MR-tw(vg,fB,10.5); page.drawText(vg,{x:xr,y:y-s,size:10.5,font:fB,color:TEXT});
     page.drawText(lab,{x:xr-tw(lab,fN,s)-8,y:y-s,size:s,font:fN,color:GRAU});
+    y-=18;
+    kaestchen(ML, y-9.5, v("cb_kr_angelegt")); page.drawText(pdfText("Kostenrechnung bereits im Vorgang angelegt"),{x:ML+15,y:y-s,size:s,font:fN,color:TEXT});
     y-=18; }
 
   // 2 Nachgenehmigung (entfällt z. B. beim Nachlassverzeichnis); Abschnitte fortlaufend nummeriert
@@ -1216,6 +1219,7 @@ function mailText(notiz){
   if (vorgangWert()) z.push("Vorgangs-Nr.: "+vorgangWert());
   if (art()==="kauf" && istAn("kauf_grundschuld")) z.push("Grundschuld:  mitbeurkundet" + (document.querySelector('[data-f="kgs_uvz"]').value.trim() ? ", UVZ-Nr. "+document.querySelector('[data-f="kgs_uvz"]').value.trim() : ""));
   if (document.querySelector('[data-f="cb_papierurkunde"]').checked) z.push("Papierurkunde: ja");
+  if (document.querySelector('[data-f="cb_kr_angelegt"]').checked) z.push("Kostenrechnung: bereits im Vorgang angelegt");
   Array.from(tb.rows).filter(r=>!r.hidden).forEach(r=>{
     const name = r.querySelector('[data-f$="_name"]').value.trim(); if (!name) return;
     z.push((r.querySelector(".bez").value.trim()||"Beteiligter")+": "+name);
