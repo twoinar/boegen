@@ -263,8 +263,7 @@ dialog.mail textarea{min-height:70px}
         <label class="cb" data-arten="kauf uebertragung scheidung ehevertrag"><input type="checkbox" data-f="anzeige_schenkungsteuer"><span>Anzeige Finanzamt Schenkungsteuer</span></label>
         <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="anzeige_gutachterausschuss"><span>Anzeige Gutachterausschuss</span></label>
         <label class="cb" data-arten="kauf"><input type="checkbox" data-f="vorkaufsrecht_gemeinde"><span>Vorkaufsrechtsverzichtserklärung Gemeinde</span></label>
-        <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
-        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="gb_eigentum"><span>Antrag auf Eigentumsumschreibung beim Grundbuchamt</span></label>
+        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
         <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_ausfertigung"><span>Ausfertigung / Abschrift an Gläubiger</span></label>
         <div class="sub senk aufklapp" data-zeigen-wenn="gs_ausfertigung" data-leeren>
           <label class="cb"><input type="checkbox" data-f="gs_ausf_vollstr"><span>vollstreckbare Ausfertigung</span></label>
@@ -274,25 +273,36 @@ dialog.mail textarea{min-height:70px}
         </div>
         <label class="cb" data-arten="grundschuld"><input type="checkbox" data-f="gs_notarbestaetigung"><span>Notarbestätigung an Gläubiger</span></label>
         <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="bank_entlassung"><span>Schuldhaftentlassung durch die Bank</span></label>
-        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="abschrift_gericht"><span>Abschrift an Familiengericht / Rechtsanwälte</span></label>
+        <div class="sub aufklapp" data-zeigen-wenn="bank_entlassung" data-leeren>
+          <label class="cb"><input type="checkbox" data-f="bank_wir" data-gruppe="bank"><span>wir holen ein</span></label>
+          <label class="cb"><input type="checkbox" data-f="bank_beteiligte" data-gruppe="bank"><span>Beteiligte holen ein</span></label>
+        </div>
         <label class="cb" data-arten="ehevertrag"><input type="checkbox" data-f="gueterrechtsregister"><span>Eintragung Güterrechtsregister</span></label>
-        <label class="cb" data-arten="scheidung ehevertrag"><input type="checkbox" data-f="ausfertigungen"><span>Ausfertigungen an die Beteiligten</span></label>
+        <label class="cb" data-arten="ehevertrag"><input type="checkbox" data-f="ausfertigungen"><span>Ausfertigungen an die Beteiligten</span></label>
         <label class="cb" data-arten="scheidung ehevertrag testament"><input type="checkbox" data-f="ztr"><span>Registrierung Zentrales Testamentsregister</span></label>
+        <label class="cb" data-arten="scheidung"><input type="checkbox" data-f="sg_genehmigung"><span>Genehmigungen / Zustimmungen</span></label>
+        <div class="sub senk aufklapp" data-zeigen-wenn="sg_genehmigung" data-leeren>
+          <label class="cb"><input type="checkbox" data-f="sg_grdstvg"><span>Genehmigung Grundstücksverkehrsgesetz</span></label>
+          <label class="cb"><input type="checkbox" data-f="sg_zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
+          <label class="cb"><input type="checkbox" data-f="sg_zust_verwalter"><span>Zustimmung des Verwalters</span></label>
+          <label class="cb"><input type="checkbox" data-f="sg_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
+          <label class="cb"><input type="checkbox" data-f="sg_familiengericht"><span>Genehmigung Familiengericht</span></label>
+        </div>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_ag"><span>Ablieferung in die besondere amtliche Verwahrung (Amtsgericht)</span></label>
         <label class="cb" data-arten="testament"><input type="checkbox" data-f="verwahrung_notar"><span>Verwahrung beim Notar (Erbvertrag)</span></label>
-        <label class="cb" data-arten="testament"><input type="checkbox" data-f="hinterlegungsschein"><span>Hinterlegungsschein an Erblasser</span></label>
-        <label class="cb" data-arten="testament"><input type="checkbox" data-f="abschrift_erblasser"><span>Beglaubigte Abschrift an Erblasser</span></label>
+        <label class="cb" data-arten="testament"><input type="checkbox" data-f="hinterlegungsschein"><span>Hinterlegungsschein an Testator</span></label>
+        <label class="cb" data-arten="testament"><input type="checkbox" data-f="abschrift_erblasser"><span>Beglaubigte Abschrift an Testator</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="zvr"><span>Registrierung Zentrales Vorsorgeregister</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_vollmachtgeber"><span>Ausfertigung an Vollmachtgeber</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_bevollmaechtigte"><span>Ausfertigungen an Bevollmächtigte</span></label>
         <label class="cb" data-arten="vorsorge"><input type="checkbox" data-f="ausf_zurueckhalten"><span>Ausfertigungen erst auf Anweisung des Vollmachtgebers erteilen</span></label>
-        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung"><input type="checkbox" data-f="zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
-        <label class="cb" data-arten="kauf uebertragung scheidung"><input type="checkbox" data-f="zust_verwalter"><span>Zustimmung des Verwalters</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="zust_eigentuemer"><span>Zustimmung des Grundstückseigentümers</span></label>
+        <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="zust_verwalter"><span>Zustimmung des Verwalters</span></label>
         <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_sanierung"><span>Sanierungsrechtliche Genehmigung</span></label>
         <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_entwicklung"><span>Entwicklungsrechtliche Genehmigung</span></label>
-        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung"><input type="checkbox" data-f="gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld"><input type="checkbox" data-f="gen_betreuungsgericht"><span>Genehmigung Betreuungsgericht</span></label>
         <label class="cb" data-arten="kauf uebertragung"><input type="checkbox" data-f="gen_nachlassgericht"><span>Genehmigung Nachlassgericht</span></label>
-        <label class="cb" data-arten="kauf uebertragung grundschuld scheidung ehevertrag"><input type="checkbox" data-f="gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
+        <label class="cb" data-arten="kauf uebertragung grundschuld ehevertrag"><input type="checkbox" data-f="gen_familiengericht"><span>Genehmigung Familiengericht</span></label>
       </div>
       <div>
         <div class="sonst"><label class="cb"><input type="checkbox" data-f="sonstiges_vollzug"><span>Sonstiges:</span></label>
@@ -472,7 +482,7 @@ const ARTEN = {
   grundschuld:  { name:"Grundschuld",            v:["Eigentümer",1], e:["Erwerber",0],          makler:["Gläubiger",1], loesch:true },
   scheidung:    { name:"Scheidungsvereinbarung", v:["Ehegatte",2],   e:["Rechtsanwalt",0],      makler:null, loesch:true },
   ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false },
-  testament:    { name:"Testament / Erbvertrag", v:["Erblasser",1],  e:null,                    makler:null, loesch:false },
+  testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false },
   vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false },
 };
 const artWahl = () => document.querySelector('[data-f="urkundsart"]');
@@ -484,7 +494,7 @@ function gruppenSetzen(){
   Object.assign(GRUPPEN.makler, a.makler ? {name:a.makler[0], min:a.makler[1], aus:false} : {name:"Makler", min:0, aus:true});
 }
 /* Bezeichnungen: vorgegeben (Veräußerer 1, Erwerber …), aber frei überschreibbar, z. B. „Berechtigte“ */
-const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0], a.makler && a.makler[0]]).filter(Boolean)];
+const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige","Erblasser", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0], a.makler && a.makler[0]]).filter(Boolean)];
 const STANDARD_BEZ = new RegExp("^(" + [...new Set(ROLLENNAMEN)].join("|") + ")( \\d+)?$");
 const zeile = k => tb.querySelector(`tr[data-rolle="${k}"]`);
 const zeileHatInhalt = k => [...zeile(k).querySelectorAll("[data-f]")].some(el => el.type==="checkbox" ? el.checked : (el.value.trim()!=="" && !(el.classList.contains("bez") && STANDARD_BEZ.test(el.value.trim()))));
