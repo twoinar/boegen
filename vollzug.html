@@ -197,6 +197,7 @@ dialog.mail textarea{min-height:70px}
   <button type="button" id="btnOrdner">Ablageordner wählen</button>
   <button type="button" id="btnOeffnen">Bogen öffnen</button>
   <button type="button" id="btnNeu">Neuer Bogen</button>
+  <button type="button" id="btnVersand" title="Versand aus dem Word-Makro „Verteilerzettel versenden“ eintragen">Versand übernehmen</button>
   <button type="button" id="btnDrucken">Drucken</button>
   <button type="button" id="btnMail">Mailen</button>
   <button type="button" class="primary" id="btnAblegen">Vollzugsbogen ablegen</button>
@@ -391,6 +392,7 @@ dialog.mail textarea{min-height:70px}
   <section>
     <h2><span id="nrBem">6</span><span>Weitere Anweisungen / Bemerkungen</span></h2>
     <textarea rows="8" data-f="bemerkungen" aria-label="Weitere Anweisungen und Bemerkungen"></textarea>
+    <input type="hidden" data-f="versand_uebernommen">
   </section>
 
   <footer class="fuss">Notar Thomas Woinar · Vollzugsbogen</footer>
@@ -1144,6 +1146,7 @@ async function oeffnen(){
     if (ordner) opt.startIn = ordner;
     const [fh] = await window.showOpenFilePicker(opt);
     const f = await fh.getFile(); await bogenLaden(await f.arrayBuffer(), f.name);
+    await versandUebernehmen(true);
   } else {
     const inp=document.createElement("input"); inp.type="file"; inp.accept="application/pdf";
     inp.onchange=async()=>{ const f=inp.files[0]; if(f) try{ await bogenLaden(await f.arrayBuffer(), f.name);}catch(e){fehler(e);} };
@@ -1165,6 +1168,95 @@ document.getElementById("btnOrdner").onclick = ()=>{ if(!dateisystemOk){ meldung
 document.getElementById("btnAblegen").onclick = ()=>ablegen().catch(fehler);
 document.getElementById("btnOeffnen").onclick = ()=>oeffnen().catch(fehler);
 document.getElementById("btnNeu").onclick = neu;
+document.getElementById("btnVersand").onclick = ()=>versandUebernehmen(false).catch(fehler);
+// Neuer Bogen: liegt zur eingetragenen UVZ-Nr. schon ein Versand vor, darauf hinweisen (übernommen wird erst
+// nach Klick, damit die Namen vorher eingetragen sind und die Zuordnung klappt)
+document.querySelector('[data-f="uvz_nr"]').addEventListener("change", ()=>versandPruefen().catch(()=>{}));
+async function versandPruefen(){
+  if (!dateisystemOk || !ordner || !uvzWert()) return;
+  if (await ordner.queryPermission({mode:"read"}) !== "granted") return;
+  const praefix = uvzWert().replace(/[\\/:*?"<>|]/g,"-").replace(/\s+/g,"") + " Versand ";
+  const erledigt = new Set(document.querySelector('[data-f="versand_uebernommen"]').value.split("|").filter(Boolean));
+  for await (const [name, h] of ordner.entries())
+    if (h.kind==="file" && name.startsWith(praefix) && !erledigt.has(name)){
+      meldung(`Zu UVZ-Nr. ${uvzWert()} liegt ein Versand aus dem Verteilerzettel vor. Erst die Beteiligten eintragen, dann „Versand übernehmen“ klicken.`);
+      return;
+    }
+}
+
+/* ---------- Versand aus dem Word-Makro „Verteilerzettel versenden“ übernehmen ----------
+   Das Makro legt nach jedem Versand „<Nr>-<Jahr> Versand <Zeit>.json“ in den Ablageordner. Beim Öffnen eines
+   Bogens (und mit „Versand übernehmen“) wird jede dieser Dateien genau einmal eingetragen: Kopien erteilt +1,
+   Häkchen E-Mail bzw. Post, Nachgenehmigung, Zeile unter Bemerkungen. Übernommene Dateien merkt sich das
+   versteckte Feld versand_uebernommen.                                                                     */
+function nameNorm(s){
+  return (s||"").toLowerCase().replace(/\b(herrn?|frau|dr|prof|med|jur)\b\.?/g," ")
+    .replace(/[^a-z0-9äöüß]+/g," ").trim().split(" ").filter(Boolean);
+}
+function zeileFuerName(name){
+  const n = nameNorm(name); if (!n.length) return null;
+  for (const tr of tb.querySelectorAll("tr")){
+    if (tr.hidden) continue;
+    const z = nameNorm(tr.querySelector(`[data-f="${tr.dataset.rolle}_name"]`).value);
+    if (z.length && (n.every(t=>z.includes(t)) || z.every(t=>n.includes(t)))) return tr;
+  }
+  return null;
+}
+function freieZeile(name){
+  const k = GRUPPEN.sonst.keys.find(k=>zeile(k).hidden || !zeileHatInhalt(k)); if (!k) return null;
+  zeile(k).hidden = false; beteiligteAnzeigen();
+  document.querySelector(`[data-f="${k}_name"]`).value = name;
+  return zeile(k);
+}
+const deDatum = iso => { const [j,m,t] = iso.slice(0,10).split("-"); return `${t}.${m}.${j}`; };
+async function versandUebernehmen(still){
+  const uvz = uvzWert();
+  if (!uvz){ if (!still) meldung("Bitte zuerst einen Bogen öffnen oder die UVZ-Nr. eintragen.","err"); return; }
+  if (!dateisystemOk || !ordner){ if (!still) meldung("Bitte zuerst den Ablageordner wählen (nur Chrome oder Edge).","err"); return; }
+  let p = await ordner.queryPermission({mode:"read"});
+  if (p!=="granted" && !still) p = await ordner.requestPermission({mode:"read"});
+  if (p!=="granted") return;
+
+  const praefix = uvz.replace(/[\\/:*?"<>|]/g,"-").replace(/\s+/g,"") + " Versand ";
+  const feld = document.querySelector('[data-f="versand_uebernommen"]');
+  const erledigt = new Set(feld.value.split("|").filter(Boolean));
+  const dateien = [];
+  for await (const [name, h] of ordner.entries())
+    if (h.kind==="file" && name.startsWith(praefix) && name.toLowerCase().endsWith(".json") && !erledigt.has(name)) dateien.push([name,h]);
+  if (!dateien.length){ if (!still) meldung(`Kein neuer Versand zu UVZ-Nr. ${uvz} im Ablageordner.`); return; }
+  dateien.sort((a,b)=>a[0].localeCompare(b[0]));
+
+  const protokoll = [];
+  for (const [name, h] of dateien){
+    let d; try { d = JSON.parse(await (await h.getFile()).text()); } catch { continue; }
+    if (d.art!=="WoinarVersand") continue;
+    const tag = deDatum(d.zeit||new Date().toISOString());
+    for (const e of d.eintraege||[]){
+      const tr = zeileFuerName(e.name) || freieZeile(e.name);
+      const was = [e.eabschrift&&"eAbschrift per E-Mail", e.genehmigung&&"Genehmigungserklärung per E-Mail", e.papier&&"Kopie auf Papier"].filter(Boolean);
+      protokoll.push(`${e.name}: ${was.join(", ")}`);
+      if (tr){
+        const k = tr.dataset.rolle, el = f => document.querySelector(`[data-f="${k}_${f}"]`);
+        const n = (e.eabschrift?1:0) + (e.papier?1:0);
+        if (n) el("kopien_erteilt").value = (parseInt(el("kopien_erteilt").value,10)||0) + n;
+        if (e.eabschrift) el("kopie_email").checked = true;
+        if (e.papier) el("kopie_post").checked = true;
+      }
+      if (e.genehmigung){
+        const q = s => document.querySelector(`[data-f="${s}"]`);
+        q("nachgen_erforderlich").checked = true;
+        if (!q("nachgen_durch").value.includes(e.name)) q("nachgen_durch").value = [q("nachgen_durch").value, e.name].filter(Boolean).join(", ");
+        q("nachgen_hinweis").value = [q("nachgen_hinweis").value, `Genehmigungserklärung am ${tag} per E-Mail an ${e.name} (${e.email}) versandt.`].filter(Boolean).join("\n");
+      }
+    }
+    const bem = document.querySelector('[data-f="bemerkungen"]');
+    bem.value = [bem.value, `Versand ${tag} (${d.von||"Verteilerzettel"}): ` + (d.eintraege||[]).map(e=>e.name+" – "+[e.eabschrift&&"eAbschrift",e.genehmigung&&"Genehmigung",e.papier&&"Papier"].filter(Boolean).join("+")).join("; ")].filter(Boolean).join("\n");
+    erledigt.add(name);
+  }
+  feld.value = [...erledigt].join("|");
+  dynamik(); textfelderAnpassen(); geaendert = true;
+  meldung(`Versand übernommen (${protokoll.length}): ${protokoll.join(" · ")}. Bitte „Vollzugsbogen ablegen“, damit es gespeichert wird.`);
+}
 
 /* ---------- E-Mail an Mitarbeiter (Outlook-Entwurf mit Anhang) ----------
    Mitarbeiterliste hier pflegen: Name und E-Mail-Adresse.                  */
