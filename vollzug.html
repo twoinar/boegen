@@ -120,6 +120,13 @@ td input.bez:focus{background:var(--field-focus)}
 .gs-ausf{display:grid;grid-template-columns:auto auto auto;gap:0 18px;align-items:center;padding-left:25px}
 .gs-ausf>span{color:var(--muted);grid-row:span 2}
 @media (max-width:640px){.gs-ausf{grid-template-columns:1fr}}
+.kgs-ng{margin:6px 0 6px 25px;border:1px solid var(--line);border-left:6px solid var(--line);border-radius:4px;padding:6px 12px}
+.kgs-ng.aktiv{border:1.5px solid var(--red);border-left:6px solid var(--red);background:var(--red-bg)}
+.kgs-ng.aktiv > label b{color:var(--red)}
+.kgs-ng .reihe{display:grid;grid-template-columns:170px 1fr;gap:10px;align-items:center;margin-top:8px}
+.kgs-ng .eingeholt{display:flex;gap:10px;align-items:center;margin-top:8px}.kgs-ng .eingeholt input[type=date]{width:160px}
+.kgs-ng input[type=text],.kgs-ng input[type=date],.kgs-ng textarea{background:var(--sheet)}
+@media (max-width:640px){.kgs-ng .reihe{grid-template-columns:1fr}}
 .kgs-gen{padding-left:50px}
 .kgs-tab{margin:8px 0 0 25px}.kgs-tab table{min-width:620px}.kgs-tab td.l{white-space:normal;font-weight:bold}
 .gs-kauf{margin-top:10px;border-top:1px dashed var(--line);padding-top:6px}
@@ -322,6 +329,15 @@ dialog.mail textarea{min-height:70px}
       <label class="cb"><input type="checkbox" data-f="kauf_grundschuld"><span><b>Finanzierungsgrundschuld</b> im Anschluss mitbeurkundet</span></label>
       <div class="aufklapp" data-zeigen-wenn="kauf_grundschuld" data-leeren>
         <div class="gs-reihe"><label for="f_kgsuvz">UVZ-Nr. Grundschuld:</label><input type="text" id="f_kgsuvz" data-f="kgs_uvz" autocomplete="off"></div>
+        <div class="kgs-ng" id="kgsNg">
+          <label class="cb"><input type="checkbox" data-f="kgs_ng"><span><b>Ein Beteiligter muss noch nachgenehmigen.</b> <span data-zeigen-wenn="kgs_ng">Genehmigung als Erstes einholen.</span></span></label>
+          <div class="aufklapp" data-zeigen-wenn="kgs_ng" data-leeren>
+            <div class="reihe"><label for="f_kgsngd">Nachgenehmigung durch:</label><input type="text" id="f_kgsngd" data-f="kgs_ng_durch"></div>
+            <div class="eingeholt"><label class="cb"><input type="checkbox" data-f="kgs_ng_eingeholt"><span>bereits vom Notar eingeholt am:</span></label>
+              <input type="date" data-f="kgs_ng_am" data-date aria-label="Eingeholt am"></div>
+            <div class="reihe"><label for="f_kgsngh">Hinweis:</label><textarea id="f_kgsngh" rows="2" data-f="kgs_ng_hinweis"></textarea></div>
+          </div>
+        </div>
         <div class="gs-ausf"><span>An Gläubiger:</span>
           <label class="cb"><input type="checkbox" data-f="kgs_ausf_vollstr"><span>vollstreckbare Ausfertigung</span></label>
           <label class="cb"><input type="checkbox" data-f="kgs_ausf_einfach"><span>einfache Ausfertigung</span></label>
@@ -661,6 +677,7 @@ document.addEventListener("change", e=>{
     document.querySelectorAll(`[data-gruppe="${el.dataset.gruppe}"]`).forEach(o=>{ if(o!==el) o.checked=false; });
     if (el.dataset.gruppe==="ub") document.querySelector('[data-f="anzeige_grest"]').checked = true;
   }
+  if (el.dataset.f==="kgs_ng_am" && el.value) document.querySelector('[data-f="kgs_ng_eingeholt"]').checked = true;
   if (el.dataset.f==="nachgen_eingeholt_am" && el.value)
     document.querySelector('[data-f="nachgen_bereits_eingeholt"]').checked = true;
 });
@@ -684,6 +701,7 @@ function dynamik(ausloeser){
     c.hidden = !sichtbar;
   });
   document.getElementById("nachgenehmigung").classList.toggle("aktiv", istAn("nachgen_erforderlich"));
+  document.getElementById("kgsNg").classList.toggle("aktiv", istAn("kgs_ng"));
 }
 document.addEventListener("change", e=>{ if (e.target.type==="checkbox"){ dynamik(e.target); if (e.target.dataset.f==="cb_loeschung") loeschZuruecksetzen(true); } });
 artAnwenden(false); beteiligteZuruecksetzen(false);
@@ -914,6 +932,21 @@ async function pdfErzeugen(){
       y-=4; cbZeile(v("kauf_grundschuld"), "Finanzierungsgrundschuld im Anschluss mitbeurkundet", ML, BW, {fett:true});
       if (v("kauf_grundschuld")){
         if (v("kgs_uvz")) text("UVZ-Nr. Grundschuld: "+v("kgs_uvz"),{x:ML+16,max:BW-16});
+        if (v("kgs_ng")){
+          const zl=[["Nachgenehmigung durch:", v("kgs_ng_durch")], ["Hinweis:", v("kgs_ng_hinweis")]].filter(x=>x[1]).map(([l,w])=>[l, umbrechen(w,fN,9,BW-170)]);
+          const h = 34 + zl.reduce((n,[,z])=>n+z.length*12,0);
+          platz(h+6); y-=3;
+          page.drawRectangle({x:ML+16,y:y-h,width:BW-16,height:h,color:ROTBG,borderColor:ROT,borderWidth:1});
+          page.drawRectangle({x:ML+16,y:y-h,width:4,height:h,color:ROT});
+          let yy=y-13;
+          kaestchen(ML+28, yy-1.5, true);
+          page.drawText(pdfText("Ein Beteiligter muss noch nachgenehmigen. Genehmigung als Erstes einholen."),{x:ML+44,y:yy,size:9,font:fB,color:ROT}); yy-=13;
+          for (const [l,z] of zl){ page.drawText(pdfText(l),{x:ML+44,y:yy,size:9,font:fN,color:GRAU}); z.forEach(t=>{ page.drawText(t,{x:ML+165,y:yy,size:9,font:fN,color:TEXT}); yy-=12; }); }
+          kaestchen(ML+44, yy-1.5, v("kgs_ng_eingeholt"));
+          page.drawText(pdfText("bereits vom Notar eingeholt am:"),{x:ML+60,y:yy,size:9,font:fN,color:TEXT});
+          if (v("kgs_ng_am")) page.drawText(nachDeutsch(v("kgs_ng_am")),{x:ML+200,y:yy,size:9,font:fN,color:TEXT});
+          y -= h+6;
+        } else cbZeile(false, "Ein Beteiligter muss noch nachgenehmigen.", ML+16, BW-16);
         platz(44);
         page.drawText("An Gläubiger:",{x:ML+16,y:y-9,size:9,font:fN,color:GRAU});
         [["kgs_ausf_vollstr","vollstreckbare Ausfertigung"],["kgs_ausf_einfach","einfache Ausfertigung"],["kgs_ausf_begl","beglaubigte Abschrift"],["kgs_ausf_elektr","elektronisch beglaubigte Abschrift"]].forEach(([f,t],i)=>{
