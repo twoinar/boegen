@@ -127,6 +127,9 @@ td input.bez:focus{background:var(--field-focus)}
 .kgs-ng .eingeholt{display:flex;gap:10px;align-items:center;margin-top:8px}.kgs-ng .eingeholt input[type=date]{width:160px}
 .kgs-ng input[type=text],.kgs-ng input[type=date],.kgs-ng textarea{background:var(--sheet)}
 @media (max-width:640px){.kgs-ng .reihe{grid-template-columns:1fr}}
+table.ohne-vz .vz{display:none}
+table.ohne-vz td input.bez{width:230px}
+.bet-hinw{margin:8px 0 0;padding:8px 12px;border-left:4px solid var(--red);background:var(--red-bg);font-size:13px}
 .kgs-gen{padding-left:50px}
 .kgs-tab{margin:8px 0 0 25px}.kgs-tab table{min-width:620px}.kgs-tab td.l{white-space:normal;font-weight:bold}
 .gs-kauf{margin-top:10px;border-top:1px dashed var(--line);padding-top:6px}
@@ -254,12 +257,13 @@ dialog.mail textarea{min-height:70px}
     <h2><span>3</span><span>Beteiligte, Kopien und Versand</span></h2>
     <div class="tab-wrap"><table>
       <thead>
-        <tr><th></th><th></th><th class="grp" colspan="4">Kopien</th><th class="grp" colspan="2">Vollzugsschreiben</th><th class="grp" colspan="2">Kostenberechnung</th><th class="nodruck"></th></tr>
+        <tr><th></th><th></th><th class="grp" colspan="4">Kopien</th><th class="grp vz" colspan="2">Vollzugsschreiben</th><th class="grp" colspan="2">Kostenberechnung</th><th class="nodruck"></th></tr>
         <tr><th class="l">Beteiligter</th><th class="l">Name</th><th>erteilt<small>(Anzahl)</small></th><th>gewünscht<small>(Anzahl)</small></th>
-          <th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th><th>Post</th><th>E-Mail</th><th class="nodruck"></th></tr>
+          <th>Post</th><th>E-Mail</th><th class="vz">Post</th><th class="vz">E-Mail</th><th>Post</th><th>E-Mail</th><th class="nodruck"></th></tr>
       </thead>
       <tbody id="beteiligte"></tbody>
     </table></div>
+    <p class="bet-hinw" id="betHinw" hidden></p>
     <div class="hinzu nodruck" id="hinzu">
       <button type="button" data-plus="v">+ weiterer Veräußerer</button>
       <button type="button" data-plus="e">+ weiterer Erwerber</button>
@@ -442,7 +446,7 @@ const ROLLEN = [["Veräußerer 1","v1"],["Veräußerer 2","v2"],["Veräußerer 3
   ["Sonstiger 1","sonst"],["Sonstiger 2","sonst2"],["Sonstiger 3","sonst3"],["Sonstiger 4","sonst4"],["Sonstiger 5","sonst5"]];
 const tb = document.getElementById("beteiligte");
 for (const [lab,k] of ROLLEN){
-  const cb = (f,t)=>`<td><input type="checkbox" data-f="${k}_${f}" aria-label="${lab}: ${t}"></td>`;
+  const cb = (f,t)=>`<td${f.startsWith("vollzug_") ? ' class="vz"' : ""}><input type="checkbox" data-f="${k}_${f}" aria-label="${lab}: ${t}"></td>`;
   tb.insertAdjacentHTML("beforeend",`<tr><td class="l"><input type="text" class="bez" data-f="${k}_bez" aria-label="${lab}: Bezeichnung" title="Bezeichnung frei änderbar, z. B. Berechtigte"></td>
     <td><input type="text" data-f="${k}_name" aria-label="${lab}: Name"></td>
     <td><input type="number" min="0" step="1" data-f="${k}_kopien_erteilt" aria-label="${lab}: Kopien erteilt"></td>
@@ -529,7 +533,9 @@ const ARTEN = {
   ehevertrag:   { name:"Ehevertrag",             v:["Ehegatte",2],   e:null,                    makler:null, loesch:false, gw:"Ehevertrag" },
   testament:    { name:"Testament / Erbvertrag", v:["Testator",1],  e:null,                    makler:null, loesch:false, gw:"Testament" },
   vorsorge:     { name:"Vorsorgevollmacht",      v:["Vollmachtgeber",1], e:["Bevollmächtigter",1], makler:null, loesch:false, gw:"Vorsorgevollmacht" },
-  nachlass:     { name:"Nachlassverzeichnis",    v:["Erbe",1],       e:["Pflichtteilsberechtigter",1], makler:null, loesch:false, gw:"Nachlassverzeichnis", kr:"nachlass" },
+  nachlass:     { name:"Nachlassverzeichnis",    v:["Erbe",1],       e:["Pflichtteilsberechtigter",1], makler:null, loesch:false, gw:"Nachlassverzeichnis", kr:"nachlass",
+                  ohneVz:true, sonst:["Anwalt Erbe","Anwalt Pflichtteilsberechtigter"],
+                  hinweis:"Dem Pflichtteilsberechtigten und seinem Anwalt wird die Urkunde nur mit Einwilligung des Erben bzw. des Anwalts des Erben übersandt." },
 };
 const artWahl = () => document.querySelector('[data-f="urkundsart"]');
 const art = () => ARTEN[artWahl().value] ? artWahl().value : "kauf";
@@ -537,10 +543,11 @@ function gruppenSetzen(){
   const a = ARTEN[art()];
   Object.assign(GRUPPEN.v, {name:a.v[0], min:a.v[1], aus:false});
   Object.assign(GRUPPEN.e, a.e ? {name:a.e[0], min:a.e[1], aus:false} : {name:"Erwerber", min:0, aus:true});
+  Object.assign(GRUPPEN.sonst, {namen:a.sonst||null, min:a.sonst ? a.sonst.length : 0});
   Object.assign(GRUPPEN.makler, a.makler ? {name:a.makler[0], min:a.makler[1], aus:false} : {name:"Makler", min:0, aus:true});
 }
 /* Bezeichnungen: vorgegeben (Veräußerer 1, Erwerber …), aber frei überschreibbar, z. B. „Berechtigte“ */
-const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige","Erblasser", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0], a.makler && a.makler[0]]).filter(Boolean)];
+const ROLLENNAMEN = ["Veräußerer","Erwerber","Makler","Sonstiger","Sonstige","Erblasser", ...Object.values(ARTEN).flatMap(a=>[a.v[0], a.e && a.e[0], a.makler && a.makler[0], ...(a.sonst||[])]).filter(Boolean)];
 const STANDARD_BEZ = new RegExp("^(" + [...new Set(ROLLENNAMEN)].join("|") + ")( \\d+)?$");
 const zeile = k => tb.querySelector(`tr[data-rolle="${k}"]`);
 const zeileHatInhalt = k => [...zeile(k).querySelectorAll("[data-f]")].some(el => el.type==="checkbox" ? el.checked : (el.value.trim()!=="" && !(el.classList.contains("bez") && STANDARD_BEZ.test(el.value.trim()))));
@@ -559,7 +566,7 @@ function beteiligteAnzeigen(){
   for (const [g,cfg] of Object.entries(GRUPPEN)){
     const sichtbar = cfg.keys.filter(k=>!zeile(k).hidden);
     sichtbar.forEach((k,i)=>{
-      const inp = zeile(k).querySelector(".bez"), vorgabe = cfg.name + (cfg.keys.length>1 && sichtbar.length>1 ? " "+(i+1) : "");
+      const inp = zeile(k).querySelector(".bez"), vorgabe = (cfg.namen && cfg.namen[i]) || cfg.name + (cfg.keys.length>1 && sichtbar.length>1 ? " "+(i+1) : "");
       if (!inp.value.trim() || STANDARD_BEZ.test(inp.value.trim())) inp.value = vorgabe;
     });
     const plus = document.querySelector(`[data-plus="${g}"]`);
@@ -622,10 +629,13 @@ function artAnwenden(nachfragen){
   gruppenSetzen();
   const wegZeilen = Object.values(GRUPPEN).filter(g=>g.aus).flatMap(g=>g.keys).filter(k=>!zeile(k).hidden || zeileHatInhalt(k));
   if (nachfragen){
-    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (a!=="kauf" && istAn("kauf_grundschuld")) || (cfg.gw !== (ARTEN[artVorher]||{}).gw && document.getElementById("f_gw").value.trim()!=="") || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
+    const verlust = wegSchritte.some(l=>l.querySelector("input").checked) || (cfg.ohneVz && [...tb.querySelectorAll('td.vz input')].some(c=>c.checked)) || (a!=="kauf" && istAn("kauf_grundschuld")) || (cfg.gw !== (ARTEN[artVorher]||{}).gw && document.getElementById("f_gw").value.trim()!=="") || (wegLoesch && istAn("cb_loeschung")) || wegZeilen.some(zeileHatInhalt);
     if (verlust && !confirm(`Für „${cfg.name}“ entfallen Angaben, die schon eingetragen sind (Vollzugsschritte, Beteiligte oder Löschungen). Diese werden gelöscht. Fortfahren?`)) return false;
   }
   wegSchritte.forEach(l=>{ l.querySelector("input").checked = false; });
+  if (cfg.ohneVz) tb.querySelectorAll('td.vz input').forEach(c=>{ c.checked = false; });
+  tb.closest("table").classList.toggle("ohne-vz", !!cfg.ohneVz);
+  document.getElementById("betHinw").textContent = cfg.hinweis || ""; document.getElementById("betHinw").hidden = !cfg.hinweis;
   wegZeilen.forEach(zeileLeeren);
   document.querySelectorAll(".schritte [data-arten]").forEach(l=>{ l.hidden = !l.dataset.arten.split(" ").includes(a); });
   if (nachfragen && cfg.gw !== (ARTEN[artVorher]||{}).gw) document.getElementById("f_gw").value = "";
@@ -891,12 +901,13 @@ async function pdfErzeugen(){
 
   // 3 Beteiligte
   ueberschrift("3","Beteiligte, Kopien und Versand");
-  { const sp=[{t:"Beteiligter",w:88,l:1},{t:"Name",w:125,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:"Post",w:36},{t:"E-Mail",w:36},{t:"Post",w:36},{t:"E-Mail",w:38}];
+  { const ohneVz = !!ARTEN[art()].ohneVz;   // z. B. Nachlassverzeichnis: kein Vollzug, keine Vollzugsschreiben
+    const sp=[{t:"Beteiligter",w:ohneVz?128:88,l:1},{t:"Name",w:ohneVz?157:125,l:1},{t:"erteilt",w:34},{t:"gewünscht",w:44},{t:"Post",w:30},{t:"E-Mail",w:32},{t:ohneVz?"":"Post",w:ohneVz?0:36},{t:ohneVz?"":"E-Mail",w:ohneVz?0:36},{t:"Post",w:36},{t:"E-Mail",w:38}];
     const xs=[]; let x=ML; for (const c of sp){ xs.push(x); x+=c.w; }
     platz(40);
     const grp=(t,a,b)=>{ const x0=xs[a], x1=xs[b]+sp[b].w; page.drawText(pdfText(t),{x:(x0+x1)/2-tw(t,fB,7)/2,y:y-8,size:7,font:fB,color:BLAU}); page.drawLine({start:{x:x0+2,y:y-11},end:{x:x1-2,y:y-11},thickness:.5,color:LINIE}); };
-    grp("Kopien",2,5); grp("Vollzugsschreiben",6,7); grp("Kostenberechnung",8,9); y-=14;
-    sp.forEach((c,i)=>{ const tx=pdfText(c.t); page.drawText(tx,{x: c.l ? xs[i]+2 : xs[i]+(c.w-tw(tx,fB,7))/2, y:y-8, size:7, font:fB, color:GRAU}); });
+    grp("Kopien",2,5); if (!ohneVz) grp("Vollzugsschreiben",6,7); grp("Kostenberechnung",8,9); y-=14;
+    sp.forEach((c,i)=>{ const tx=pdfText(c.t); if (!tx) return; page.drawText(tx,{x: c.l ? xs[i]+2 : xs[i]+(c.w-tw(tx,fB,7))/2, y:y-8, size:7, font:fB, color:GRAU}); });
     page.drawText("(Anzahl)",{x:xs[2]+(sp[2].w+sp[3].w-tw("(Anzahl)",fN,6))/2,y:y-15,size:6,font:fN,color:GRAU});
     y-=19; page.drawLine({start:{x:ML,y},end:{x:W-MR,y},thickness:.6,color:LINIE});
     const zeilen = Array.from(tb.rows).filter(r=>!r.hidden);
@@ -909,10 +920,11 @@ async function pdfErzeugen(){
       nam.forEach((z,i)=>page.drawText(z,{x:xs[1]+2,y:y-12-i*11,size:8.5,font:fN,color:TEXT}));
       [["kopien_erteilt",2],["kopien_gewuenscht",3]].forEach(([f,i])=>{ const t=pdfText(g(f)); if (t) page.drawText(t,{x:xs[i]+(sp[i].w-tw(t,fN,9))/2,y:y-12,size:9,font:fN,color:TEXT}); });
       [["kopie_post",4],["kopie_email",5],["vollzug_post",6],["vollzug_email",7],["kostenberechnung_post",8],["kostenberechnung_email",9]]
-        .forEach(([f,i])=>kaestchen(xs[i]+(sp[i].w-9)/2, y-13, g(f)));
+        .filter(([,i])=>sp[i].w>0).forEach(([f,i])=>kaestchen(xs[i]+(sp[i].w-9)/2, y-13, g(f)));
       y-=h; page.drawLine({start:{x:ML,y},end:{x:W-MR,y},thickness:.5,color:LINIE});
     }
     y-=4;
+    if (ARTEN[art()].hinweis) text("Hinweis: " + ARTEN[art()].hinweis, {s:8.5, c:ROT});
   }
 
   // 4 Vollzugsschritte (zwei Spalten wie im Formular)
