@@ -1273,7 +1273,7 @@ async function versandUebernehmen(still){
         const q = s => document.querySelector(`[data-f="${s}"]`);
         q("nachgen_erforderlich").checked = true;
         if (!q("nachgen_durch").value.includes(e.name)) q("nachgen_durch").value = [q("nachgen_durch").value, e.name].filter(Boolean).join(", ");
-        q("nachgen_hinweis").value = [q("nachgen_hinweis").value, `Genehmigungserklärung am ${tag} per E-Mail an ${e.name} (${e.email}) versandt.`].filter(Boolean).join("\n");
+        q("nachgen_hinweis").value = [q("nachgen_hinweis").value, `Genehmigungserklärung${e.genehmigungOhneBegl?" (ohne Beglaubigung)":""} am ${tag} per E-Mail an ${e.name} (${e.email}) versandt.`].filter(Boolean).join("\n");
       }
     }
     const bem = document.querySelector('[data-f="bemerkungen"]');
