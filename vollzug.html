@@ -1260,13 +1260,13 @@ async function versandUebernehmen(still){
     const tag = deDatum(d.zeit||new Date().toISOString());
     for (const e of d.eintraege||[]){
       const tr = zeileFuerName(e.name) || freieZeile(e.name);
-      const was = [e.eabschrift&&"eAbschrift per E-Mail", e.genehmigung&&"Genehmigungserklärung per E-Mail", e.papier&&"Kopie auf Papier", e.ben&&"eAbschrift für beN abgelegt (in XNP versenden)"].filter(Boolean);
+      const was = [e.eabschrift&&"eAbschrift per E-Mail", e.einfach&&"einfache Abschrift per E-Mail", e.genehmigung&&"Genehmigungserklärung per E-Mail", e.papier&&"Kopie auf Papier", e.ben&&"eAbschrift für beN abgelegt (in XNP versenden)"].filter(Boolean);
       protokoll.push(`${e.name}: ${was.join(", ")}`);
       if (tr){
         const k = tr.dataset.rolle, el = f => document.querySelector(`[data-f="${k}_${f}"]`);
-        const n = (e.eabschrift?1:0) + (e.papier?1:0);
+        const n = (e.eabschrift?1:0) + (e.einfach?1:0) + (e.papier?1:0);
         if (n) el("kopien_erteilt").value = (parseInt(el("kopien_erteilt").value,10)||0) + n;
-        if (e.eabschrift) el("kopie_email").checked = true;
+        if (e.eabschrift || e.einfach) el("kopie_email").checked = true;
         if (e.papier) el("kopie_post").checked = true;
       }
       if (e.genehmigung){
@@ -1277,7 +1277,7 @@ async function versandUebernehmen(still){
       }
     }
     const bem = document.querySelector('[data-f="bemerkungen"]');
-    bem.value = [bem.value, `Versand ${tag} (${d.von||"Verteilerzettel"}): ` + (d.eintraege||[]).map(e=>e.name+" – "+[e.eabschrift&&"eAbschrift",e.genehmigung&&"Genehmigung",e.papier&&"Papier",e.ben&&"beN offen"].filter(Boolean).join("+")).join("; ")].filter(Boolean).join("\n");
+    bem.value = [bem.value, `Versand ${tag} (${d.von||"Verteilerzettel"}): ` + (d.eintraege||[]).map(e=>e.name+" – "+[e.eabschrift&&"eAbschrift",e.einfach&&"einfache Abschrift",e.genehmigung&&"Genehmigung",e.papier&&"Papier",e.ben&&"beN offen"].filter(Boolean).join("+")).join("; ")].filter(Boolean).join("\n");
     erledigt.add(name);
   }
   feld.value = [...erledigt].join("|");
