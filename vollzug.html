@@ -1260,20 +1260,21 @@ async function versandUebernehmen(still){
     const tag = deDatum(d.zeit||new Date().toISOString());
     for (const e of d.eintraege||[]){
       const tr = zeileFuerName(e.name) || freieZeile(e.name);
-      const was = [e.eabschrift&&"eAbschrift per E-Mail", e.einfach&&"einfache Abschrift per E-Mail", e.genehmigung&&"Genehmigungserklärung per E-Mail", e.papier&&"Kopie auf Papier", e.ben&&"eAbschrift für beN abgelegt (in XNP versenden)"].filter(Boolean);
+      const post = !!e.perPost;  // keine Mail-Adresse: Abschrift und Genehmigung wurden für den Postversand ausgedruckt
+      const was = [!post&&e.eabschrift&&"eAbschrift per E-Mail", !post&&e.einfach&&"einfache Abschrift per E-Mail", e.genehmigung&&(post?"Genehmigungserklärung für die Post ausgedruckt":"Genehmigungserklärung per E-Mail"), e.papier&&"Kopie auf Papier", e.ben&&"eAbschrift für beN abgelegt (in XNP versenden)"].filter(Boolean);
       protokoll.push(`${e.name}: ${was.join(", ")}`);
       if (tr){
         const k = tr.dataset.rolle, el = f => document.querySelector(`[data-f="${k}_${f}"]`);
         const n = (e.eabschrift?1:0) + (e.einfach?1:0) + (e.papier?1:0);
         if (n) el("kopien_erteilt").value = (parseInt(el("kopien_erteilt").value,10)||0) + n;
-        if (e.eabschrift || e.einfach) el("kopie_email").checked = true;
+        if (!post && (e.eabschrift || e.einfach)) el("kopie_email").checked = true;
         if (e.papier) el("kopie_post").checked = true;
       }
       if (e.genehmigung){
         const q = s => document.querySelector(`[data-f="${s}"]`);
         q("nachgen_erforderlich").checked = true;
         if (!q("nachgen_durch").value.includes(e.name)) q("nachgen_durch").value = [q("nachgen_durch").value, e.name].filter(Boolean).join(", ");
-        q("nachgen_hinweis").value = [q("nachgen_hinweis").value, `Genehmigungserklärung${e.genehmigungOhneBegl?" (ohne Beglaubigung)":""} am ${tag} per E-Mail an ${e.name} (${e.email}) versandt.`].filter(Boolean).join("\n");
+        q("nachgen_hinweis").value = [q("nachgen_hinweis").value, `Genehmigungserklärung${e.genehmigungOhneBegl?" (ohne Beglaubigung)":""} am ${tag} ${post?`ausgedruckt, per Post an ${e.name}`:`per E-Mail an ${e.name} (${e.email})`} versandt.`].filter(Boolean).join("\n");
       }
     }
     const bem = document.querySelector('[data-f="bemerkungen"]');
