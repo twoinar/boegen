@@ -402,6 +402,15 @@ section.schritt section{margin-top:14px}
 .gs .gs-status[data-art="warn"]{color:var(--err)}
 .gs .gs-status[data-art="ok"]{color:var(--ok)}
 textarea.sachverhalt{min-height:320px;line-height:1.5}
+/* Rückmeldung beim Ablegen */
+button.legt-ab{opacity:.75;cursor:progress}
+button.abgelegt{animation:abgelegt 1.6s ease-out}
+@keyframes abgelegt{0%{filter:brightness(1.9);box-shadow:0 0 0 6px rgba(46,160,67,.45)}100%{filter:none;box-shadow:0 0 0 0 rgba(46,160,67,0)}}
+.mk-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:50;max-width:min(680px,calc(100vw - 32px));padding:12px 18px;border-radius:6px;font-size:14px;line-height:1.4;box-shadow:0 8px 28px rgba(0,0,0,.25);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+.mk-toast.zeigen{opacity:1;transform:translate(-50%,0)}
+.mk-toast.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+.mk-toast.err{background:var(--err-bg);color:var(--err);border:1px solid var(--err)}
+@media print{.mk-toast{display:none}}
 @media (max-width:640px){ .gs{grid-template-columns:1fr 1fr} }
 /* Abschluss */
 .pruef{display:grid;gap:4px;font-size:13px}
@@ -1936,6 +1945,8 @@ function kostenAusPdf(doc){
 const MK_SCHLUESSEL = "WoinarMaske";
 const mkMain = document.querySelector("main.sheet");
 const mkSchritte = [...document.querySelectorAll("section.schritt")];
+/* für die Kostenberechnung (zwei Auftraggeber = gemeinschaftliches Testament): das Feld des alten Bogens gibt es hier nur verdeckt */
+const ag2Feld = document.querySelector('[data-f="bet2_name"]');
 
 /* ---------- Rollen und Leitfragen je Gegenstand (hier pflegen) ---------- */
 const MK_ROLLEN = {
@@ -2183,7 +2194,7 @@ async function mkGsAbrufen(k, g){
     const q = am[0].properties;
     setze("brw", `${mkZahl(+q.bodenrichtwert)} €/m² (Stichtag ${nachDeutsch(q.stichtag || "")}${q.bodenrichtwertzoneName ? ", " + q.bodenrichtwertzoneName : ""})`);
   }catch(x){ fehl.push("Bodenrichtwert"); }
-  mkStand();
+  mkStand(); mkGsInBewertung();
   mkGsStatus(k, fehl.length ? `${fehl.join(" und ")} konnte nicht abgerufen werden – bitte von Hand eintragen.` : "Übernommen aus ALKIS (Flurstück, Fläche, Gebäude) und BORIS Brandenburg (Bodenrichtwert). Bitte prüfen.", fehl.length ? "warn" : "ok");
 }
 const mkGsMitInhalt = () => mkGs.filter(g => MK_GS_FELDER.some(f => (g[f] || "").trim()));
@@ -2191,6 +2202,37 @@ function mkGsVorschlag(){
   const g = gegAuswahl();
   if (!mkGs.length && (g.includes("Kaufvertrag") || g.includes("Übertragung"))){ mkGs.push(mkLeerGs()); mkGsAufbauen(); }
 }
+/* Grundstücke aus dem Sachverhalt in den Grundstückswert (Bedarfsbewertung) übernehmen:
+   je Grundstück ein Objekt; schon vorhandene Objekte mit derselben Anschrift bleiben unberührt */
+const mkNormAdr = s => String(s || "").toLowerCase().replace(/[^a-z0-9äöüß]+/g, "");
+let mkBbLauf = null;
+function mkGsInBewertung(){
+  if (!bbKasten.checked || !mkGs.some(g => (g.anschrift || "").trim())) return Promise.resolve();
+  if (mkBbLauf) return mkBbLauf.then(mkGsInBewertung);
+  mkBbLauf = (async () => {
+    await Promise.all(bbObj.map(o => o.bereit));
+    const adrVon = o => { const a = bbApiVon(o); return mkNormAdr(o.mkAnschrift || (a && a.kopf ? a.kopf().anschrift : "")); };
+    let neuAngelegt = false;
+    for (const g of mkGs){
+      const ziel = mkNormAdr(g.anschrift); if (ziel.length < 4) continue;
+      if (bbObj.some(o => adrVon(o) === ziel || mkNormAdr(o.mkAnschrift) === ziel)) continue;
+      let o = bbObj.find(x => !adrVon(x) && !(bbApiVon(x) || {hatErgebnis: () => false}).hatErgebnis());
+      if (!o){ o = bbObjektNeu(); neuAngelegt = true; }
+      await o.bereit;
+      const w = o.frame.contentWindow; o.mkAnschrift = g.anschrift;
+      try{
+        if (g.lat && g.lon) w.waehlen({geometry: {coordinates: [+g.lon, +g.lat]}, properties: {name: g.anschrift.trim()}});
+        else w.adresseSuchenUndAbrufen(g.anschrift.trim());
+      }catch(e){ /* Bewertung dann von Hand */ }
+      geaendert = true;
+    }
+    if (neuAngelegt) bbZeigen(0);
+    bbReiterAufbauen();
+  })().finally(() => { mkBbLauf = null; });
+  return mkBbLauf;
+}
+bbKasten.addEventListener("change", () => setTimeout(mkGsInBewertung, 0));
+gwKasten.addEventListener("change", () => setTimeout(mkGsInBewertung, 0));
 
 /* ---------- Gegenstand geändert ---------- */
 gegChips.addEventListener("click", () => setTimeout(() => { mkRollenVorschlag(); mkGsVorschlag(); mkBerechnungHinweis(); mkStand(); }, 0));
@@ -2213,6 +2255,7 @@ mkSchritte.forEach(s => {
 });
 function mkOeffnen(n, scrollen = true){
   mkAkt = n;
+  if (n === 4 || mkAlles) mkGsInBewertung();
   mkSchritte.forEach(s => { const an = mkAlles || +s.dataset.schritt === n; s.classList.toggle("offen", an); s.querySelector(".s-auf").setAttribute("aria-expanded", an ? "true" : "false"); });
   mkMain.classList.toggle("alles", mkAlles);
   mkStand();
@@ -2566,7 +2609,32 @@ document.getElementById("btnNeu").onclick = neu;
 document.getElementById("btnDrucken").textContent = "PDF ansehen / drucken";
 document.getElementById("btnDrucken").onclick = () => mkVorschau().then(() => meldung("Das PDF ist in einem neuen Fenster geöffnet und kann dort gedruckt werden.")).catch(fehler);
 document.getElementById("btnVorschau").onclick = () => mkVorschau().catch(fehler);
-document.getElementById("btnAblegen2").onclick = () => ablegen().then(() => mkPruefen()).catch(fehler);
+/* Ablegen mit sichtbarer Rückmeldung: Knopf leuchtet kurz auf, Hinweis unten mit Datei und Ordner */
+let mkToastTimer = null;
+function mkToast(text, art = "ok"){
+  let d = document.getElementById("mkToast");
+  if (!d){ d = document.createElement("div"); d.id = "mkToast"; d.setAttribute("role", "status"); d.setAttribute("aria-live", "polite"); document.body.appendChild(d); }
+  d.className = "mk-toast " + art; d.textContent = text;
+  requestAnimationFrame(() => d.classList.add("zeigen"));
+  clearTimeout(mkToastTimer); mkToastTimer = setTimeout(() => d.classList.remove("zeigen"), art === "ok" ? 7000 : 12000);
+}
+async function mkAblegenKlick(btn){
+  const knoepfe = ["btnAblegen", "btnAblegen2"].map(id => document.getElementById(id)).filter(Boolean), texte = knoepfe.map(b => b.textContent);
+  knoepfe.forEach(b => { b.disabled = true; b.classList.remove("abgelegt"); b.classList.add("legt-ab"); }); btn.textContent = "Wird abgelegt …";
+  let ok = false; document.getElementById("msg").innerHTML = "";
+  try{ ok = await ablegen(); }
+  catch(e){ fehler(e); if (e && e.name === "AbortError") meldung("Ablegen abgebrochen.", "err"); }
+  finally{ knoepfe.forEach((b, i) => { b.disabled = false; b.classList.remove("legt-ab"); b.textContent = texte[i]; }); }
+  if (!ok && !document.querySelector("#msg > div")) meldung("Nicht abgelegt.", "err");
+  const m = document.querySelector("#msg > div");
+  if (ok){
+    void btn.offsetWidth; btn.classList.add("abgelegt"); btn.textContent = "✓ Abgelegt";
+    setTimeout(() => { btn.textContent = texte[knoepfe.indexOf(btn)]; btn.classList.remove("abgelegt"); }, 2500);
+  }
+  if (m && m.textContent) mkToast(m.textContent, ok && !m.classList.contains("err") ? "ok" : "err");
+  mkPruefen();
+}
+["btnAblegen", "btnAblegen2"].forEach(id => { const b = document.getElementById(id); if (b) b.onclick = () => mkAblegenKlick(b); });
 document.getElementById("btnOrdner").addEventListener("click", () => setTimeout(mkPruefen, 1500));
 
 
@@ -2635,6 +2703,6 @@ mkLeeren(); mkBarHoehe(); mkOeffnen(1, false); geaendert = false;
 (async () => { await new Promise(r => setTimeout(r, 300)); mkPruefen(); })();
 </script>
 
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.2 · Stand 24.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.3 · Stand 24.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
