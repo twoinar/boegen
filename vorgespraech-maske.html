@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vorgespräch (Maske) – Notar Thomas Woinar</title>
+<title>Vorgesprächsbogen Maske – Notar Thomas Woinar</title>
 <style>
 
 :root{
@@ -387,15 +387,22 @@ section.schritt section{margin-top:14px}
 .bet .bet-fuss button:hover{text-decoration:underline}
 .ag-anzeige{background:var(--field);border-radius:2px;padding:5px 7px;min-height:1.9em;font-size:13px}
 .ag-anzeige:empty::before{content:"noch kein Auftraggeber angehakt";color:var(--muted)}
-/* Leitfragen */
-.lf-liste{display:grid;gap:10px;margin-top:10px}
-.lf-gruppe{font-size:11px;font-weight:bold;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:8px}
-.lf-feld{display:grid;gap:3px}
-.lf-feld label{font-size:13px;font-weight:bold;color:var(--blue)}
-.lf-feld label small{font-weight:normal;color:var(--muted);font-size:11.5px;margin-left:6px}
-.lf-feld textarea{min-height:2.4em}
-.lf-frei{margin-top:14px}
-textarea.sachverhalt{min-height:120px}
+/* Grundstücke */
+.gs-liste{display:grid;gap:12px;margin-top:8px}
+.gs{border:1px solid var(--line);border-radius:6px;padding:10px 12px 12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 8px;animation:auf .18s ease-out}
+.gs .gs-kopf{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;color:var(--blue);font-size:13px}
+.gs .breit{grid-column:1/-1}
+.gs label.f{display:grid;gap:2px;font-size:11px;color:var(--muted);position:relative}
+.gs label.f small{font-size:10.5px}
+.gs .adr-liste{position:absolute;left:0;right:0;top:100%;z-index:6;background:var(--sheet);border:1px solid var(--line);border-radius:4px;box-shadow:0 6px 18px var(--bar-shadow);max-height:260px;overflow:auto}
+.gs .adr-eintrag{padding:7px 10px;font-size:13px;color:var(--text);cursor:pointer}
+.gs .adr-eintrag:hover,.gs .adr-eintrag.aktiv{background:var(--field)}
+.gs .gs-status{grid-column:1/-1;font-size:11.5px;color:var(--muted)}
+.gs .gs-status:empty{display:none}
+.gs .gs-status[data-art="warn"]{color:var(--err)}
+.gs .gs-status[data-art="ok"]{color:var(--ok)}
+textarea.sachverhalt{min-height:320px;line-height:1.5}
+@media (max-width:640px){ .gs{grid-template-columns:1fr 1fr} }
 /* Abschluss */
 .pruef{display:grid;gap:4px;font-size:13px}
 .pruef div{padding:6px 10px;border-radius:4px}
@@ -468,12 +475,12 @@ textarea.sachverhalt{min-height:120px}
   <section class="schritt" data-schritt="3" id="schritt3">
     <h2 class="s-kopf"><button type="button" class="s-auf" aria-expanded="false"><span class="s-nr">3</span><span class="s-titel">Sachverhalt</span><span class="s-zus"></span></button></h2>
     <div class="s-inhalt">
-      <p class="s-hilfe" id="lfHilfe">Zu jeder Leitfrage ein eigenes Feld; leere Felder erscheinen nicht im Bogen. Im Bogen steht alles in dieser Reihenfolge unter „Sachverhalt, Vorgaben und Wünsche“.</p>
-      <div class="lf-liste" id="lfListe"></div>
-      <div class="lf-feld lf-frei">
-        <label for="f_sv" id="lfFreiLabel">Weitere Angaben, Vorgaben und Wünsche</label>
-        <textarea id="f_sv" class="sachverhalt" data-f="sachverhalt_text"></textarea>
-      </div>
+      <h3 class="s-unter" style="margin-top:6px">Grundstücke</h3>
+      <p class="s-hilfe" style="margin-top:0">Anschrift eingeben und aus der Liste wählen: Gemarkung, Flur, Flurstück, Fläche, Bebauung und Bodenrichtwert werden aus dem Liegenschaftskataster (ALKIS) und BORIS Brandenburg geholt. Das Grundbuch wird nicht abgerufen, bitte selbst eintragen. Kein Grundstück betroffen: einfach leer lassen.</p>
+      <div class="gs-liste" id="gsListe"></div>
+      <div class="hinzu nodruck"><button type="button" id="gsPlus">+ Grundstück</button></div>
+      <h3 class="s-unter">Sachverhalt, Vorgaben und Wünsche</h3>
+      <textarea id="f_sv" class="sachverhalt" data-f="sachverhalt_text" aria-label="Sachverhalt, Vorgaben und Wünsche"></textarea>
     </div>
   </section>
 
@@ -1943,29 +1950,6 @@ const MK_ROLLEN = {
 const MK_ROLLE_SONST = "Beteiligter";
 /* Kostentragung (Auswahl im Bogen) → passende Rollen, deren Namen im PDF dazugeschrieben werden */
 const MK_KOSTEN_ROLLEN = { "Veräußerer": ["Verkäufer", "Übergeber"], "Erwerber": ["Käufer", "Übernehmer"], "Ehemann": ["Ehemann"], "Ehefrau": ["Ehefrau"] };
-/* [Schlüssel, Überschrift, Hinweis] – gleicher Schlüssel bei mehreren Gegenständen = ein Feld */
-const MK_OBJEKT = ["objekt", "Grundstück / Objekt", "Anschrift, Grundbuch, Flur, Flurstück, Wohnungseigentum"];
-const MK_EHE = ["ehe", "Ehe und Kinder", "Heirat, Trennung, Kinder, bisheriger Güterstand"];
-const MK_UNTERHALT = ["unterhalt", "Unterhalt", "Ehegatte, Kinder"];
-const MK_VA = ["va", "Versorgungsausgleich", ""];
-const MK_LEITFRAGEN = {
-  "Kaufvertrag": [MK_OBJEKT, ["kaufpreis", "Kaufpreis", "Höhe, Aufteilung Grundstück / Inventar"], ["zahlung", "Fälligkeit und Zahlung", "Fälligkeit, Anderkonto, Raten"],
-    ["finanzierung", "Finanzierung", "Bank, Grundschuld, Belastungsvollmacht"], ["besitz", "Besitzübergang", "Termin, Übergabe, Räumung"],
-    ["inventar", "Mitverkauftes Inventar", "Küche, Möbel, Wert"], ["zustand", "Zustand und Mängel", "bekannte Mängel, Altlasten, Gewährleistung"],
-    ["belastungen", "Belastungen und Mietverhältnisse", "Rechte in Abt. II/III, Mieter"]],
-  "Übertragung": [MK_OBJEKT, ["gegenleistung", "Gegenleistung", "Zahlung, Übernahme von Verbindlichkeiten"], ["wohnrecht", "Wohnrecht / Nießbrauch", "für wen, welche Räume, Kosten"],
-    ["pflege", "Pflege und Versorgung", ""], ["rueckforderung", "Rückforderungsrechte", "Veräußerung, Insolvenz, Vorversterben, Scheidung"],
-    ["anrechnung", "Anrechnung und Pflichtteil", "Ausgleichung, Pflichtteilsverzicht"], ["geschwister", "Geschwister / Gleichstellung", "Abfindung, Zustimmung"]],
-  "Testament": [["familie", "Familie und Vermögen", "Ehegatte, Kinder, frühere Ehen, wesentliches Vermögen"], ["erben", "Erben", "wer zu welchen Teilen"],
-    ["ersatzerben", "Ersatzerben", ""], ["vermaechtnisse", "Vermächtnisse", "wer bekommt was"], ["anordnungen", "Teilungsanordnungen und Auflagen", ""],
-    ["tv", "Testamentsvollstreckung", ""], ["bindung", "Bindung und Änderung", "gemeinschaftliches Testament, Erbvertrag, Wiederheirat"]],
-  "Scheidung": [MK_EHE, ["zugewinn", "Güterrecht / Zugewinn", ""], ["immobilie", "Immobilie", "wer übernimmt, Ausgleich, Darlehen"], MK_UNTERHALT, MK_VA,
-    ["hausrat", "Hausrat und Sonstiges", "Fahrzeuge, Konten"]],
-  "Ehevertrag": [MK_EHE, ["gueterstand", "Güterstand", "Gütertrennung, modifizierte Zugewinngemeinschaft"], MK_UNTERHALT, MK_VA],
-  "Vorsorgevollmacht": [["bevollmaechtigte", "Bevollmächtigte", "einzeln oder gemeinsam, Reihenfolge"], ["umfang", "Umfang", "Vermögen, Gesundheit, Aufenthalt, Grundbesitz"],
-    ["ersatz", "Ersatzbevollmächtigte", ""], ["betreuung", "Betreuungsverfügung", ""]],
-  "Patientenverfügung": [["situationen", "Situationen", ""], ["wuensche", "Behandlungswünsche", ""], ["organspende", "Organspende", ""]],
-};
 /* Passende Berechnungen je Gegenstand (nur als Hinweis in Schritt 4) */
 const MK_BERECHNUNG = {
   "Kaufvertrag": "Grundstückswert und Kostenberechnung", "Übertragung": "Geschäftswert mit Grundstückswert, Kostenberechnung",
@@ -1975,7 +1959,7 @@ const MK_BERECHNUNG = {
 
 /* ---------- Zustand ---------- */
 const MK_BET_FELDER = ["rolle", "vorname", "name", "geburtsname", "geburtsdatum", "anschrift", "telefon", "email"];
-let mkBets = [], mkSv = {};          // mkSv: {schluessel: {t: Überschrift, v: Text}}
+let mkBets = [], mkGs = [];          // mkGs: Grundstücke (Anschrift, Kataster, Grundbuch)
 const mkLeerBet = ag => Object.assign(Object.fromEntries(MK_BET_FELDER.map(k => [k, ""])), {ag: !!ag});
 const mkEsc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const mkName = b => [b.vorname, b.name].map(s => (s || "").trim()).filter(Boolean).join(" ");
@@ -2064,42 +2048,152 @@ document.addEventListener("change", e => {
     if (z && !z.value.trim() && m.length) z.value = m.join(", "); }
 });
 
-/* ---------- Sachverhalt: Leitfragen ---------- */
-const mkLfListe = document.getElementById("lfListe");
-function mkLfAufbauen(){
-  mkLfListe.innerHTML = "";
-  const gezeigt = new Set();
-  const feld = (k, t, h) => {
-    gezeigt.add(k); if (!mkSv[k]) mkSv[k] = {t, v: ""}; else mkSv[k].t = t;
-    const d = document.createElement("div"); d.className = "lf-feld";
-    d.innerHTML = `<label for="lf_${k}">${mkEsc(t)}${h ? `<small>${mkEsc(h)}</small>` : ""}</label><textarea id="lf_${k}" data-lf="${k}" rows="1"></textarea>`;
-    d.querySelector("textarea").value = mkSv[k].v || "";
-    mkLfListe.appendChild(d);
-  };
-  const g = gegAuswahl(), mehrere = g.filter(x => MK_LEITFRAGEN[x]).length > 1;
-  g.forEach(x => {
-    const L = (MK_LEITFRAGEN[x] || []).filter(([k]) => !gezeigt.has(k)); if (!L.length) return;
-    if (mehrere){ const h = document.createElement("div"); h.className = "lf-gruppe"; h.textContent = x; mkLfListe.appendChild(h); }
-    L.forEach(([k, t, h]) => feld(k, t, h));
-  });
-  /* Abschnitte mit Text, die zum gewählten Gegenstand nicht mehr gehören, bleiben sichtbar */
-  const rest = Object.keys(mkSv).filter(k => !gezeigt.has(k) && (mkSv[k].v || "").trim());
-  if (rest.length){ const h = document.createElement("div"); h.className = "lf-gruppe"; h.textContent = "Weitere Abschnitte"; mkLfListe.appendChild(h);
-    rest.forEach(k => feld(k, mkSv[k].t, "")); }
-  document.getElementById("lfFreiLabel").textContent = gezeigt.size ? "Weitere Angaben, Vorgaben und Wünsche" : "Sachverhalt, Vorgaben und Wünsche";
-  document.getElementById("lfHilfe").hidden = !gezeigt.size;
-  textfelderAnpassen();
+/* ---------- Grundbesitz: Anschrift eingeben, Kataster und Bodenrichtwert abrufen ----------
+   Wie im Grundstückswert (Bedarfsbewertung): Adresse über Photon, Flurstück/Gebäude aus dem
+   Liegenschaftskataster (ALKIS vereinfacht, GeoBasis-DE/LGB) und Bodenrichtwert aus BORIS Brandenburg.
+   Grundbuchdaten werden NICHT abgerufen (nur von Hand eingetragen). */
+const MK_PHOTON = "https://photon.komoot.io/api/", MK_BORIS = "https://ogc-api.geobasis-bb.de/boris/collections/br_bodenrichtwert/items",
+      MK_ALKIS = "https://ogc-api.geobasis-bb.de/alkis-vereinfacht/collections/", MK_BBOX_BB = "11.2,51.3,14.8,53.6";
+const MK_GS_FELDER = ["anschrift", "gemarkung", "flur", "flurstueck", "flaeche", "gemeinde", "grundbuch", "gebaeude", "brw"];
+const mkLeerGs = () => Object.assign(Object.fromEntries(MK_GS_FELDER.map(k => [k, ""])), {lat: null, lon: null});
+const mkGsListe = document.getElementById("gsListe");
+const mkGeo = url => fetch(url, {headers: {Accept: "application/geo+json"}}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+const mkBox = (lon, lat, e) => [lon - e, lat - e, lon + e, lat + e].map(v => v.toFixed(6)).join(",");
+function mkImRing(x, y, ring){ let d = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){ const [xi, yi] = ring[i], [xj, yj] = ring[j]; if (((yi > y) !== (yj > y)) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d; } return d; }
+function mkEnthaelt(g, x, y){ if (!g) return false; const poly = p => mkImRing(x, y, p[0]) && !p.slice(1).some(r => mkImRing(x, y, r));
+  if (g.type === "Polygon") return poly(g.coordinates); if (g.type === "MultiPolygon") return g.coordinates.some(poly); return false; }
+function mkFlaecheM2(g){
+  const ring = r => { const lat0 = r[0][1] * Math.PI / 180, kx = 111320 * Math.cos(lat0), ky = 110540; let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] * kx) * (r[i][1] * ky) - (r[i][0] * kx) * (r[j][1] * ky); return Math.abs(a) / 2; };
+  const poly = p => ring(p[0]) - p.slice(1).reduce((x, r) => x + ring(r), 0);
+  if (!g) return 0; if (g.type === "Polygon") return poly(g.coordinates); if (g.type === "MultiPolygon") return g.coordinates.reduce((x, p) => x + poly(p), 0); return 0;
 }
-mkLfListe.addEventListener("input", e => { const k = e.target.dataset.lf; if (k && mkSv[k]){ mkSv[k].v = e.target.value; mkStand(); } });
-/* Abschnitte in der Reihenfolge der Maske (für das PDF) */
-function mkSvAbschnitte(){
-  const a = [];
-  mkLfListe.querySelectorAll("textarea[data-lf]").forEach(t => { const k = t.dataset.lf; if ((mkSv[k].v || "").trim()) a.push({t: mkSv[k].t, v: mkSv[k].v.trim()}); });
-  return a;
+function mkMitte(g){ const r = g && (g.type === "Polygon" ? g.coordinates[0] : g.type === "MultiPolygon" ? g.coordinates[0][0] : null); if (!r || !r.length) return [0, 0];
+  return [r.reduce((x, q) => x + q[0], 0) / r.length, r.reduce((x, q) => x + q[1], 0) / r.length]; }
+function mkAdrText(p){
+  const str = [p.street || (p.osm_key === "place" ? "" : p.name), p.housenumber].filter(Boolean).join(" ");
+  const ort = [p.postcode, p.city || p.town || p.village || (p.osm_key === "place" ? p.name : "")].filter(Boolean).join(" ");
+  return [str, ort].filter(Boolean).join(", ");
+}
+const mkZahl = n => Number(n).toLocaleString("de-DE", {maximumFractionDigits: 2});
+function mkGsAufbauen(fokus){
+  mkGsListe.innerHTML = "";
+  mkGs.forEach((g, i) => {
+    const k = document.createElement("div"); k.className = "gs"; k.dataset.i = i;
+    k.innerHTML = `<div class="gs-kopf"><b>Grundstück ${i + 1}</b><button type="button" class="weg" data-weg title="Grundstück entfernen" aria-label="Grundstück entfernen">×</button></div>
+      <label class="f breit gs-adr">Anschrift <small>eingeben und aus der Liste wählen – die Daten werden abgerufen</small>
+        <input type="text" data-g="anschrift" autocomplete="off" role="combobox" aria-expanded="false" placeholder="Straße Nr., Ort">
+        <div class="adr-liste" role="listbox" hidden></div></label>
+      <label class="f">Gemarkung<input type="text" data-g="gemarkung" autocomplete="off"></label>
+      <label class="f">Flur<input type="text" data-g="flur" autocomplete="off"></label>
+      <label class="f">Flurstück<input type="text" data-g="flurstueck" autocomplete="off"></label>
+      <label class="f">Fläche (m²)<input type="text" data-g="flaeche" inputmode="decimal" autocomplete="off"></label>
+      <label class="f">Gemeinde<input type="text" data-g="gemeinde" autocomplete="off"></label>
+      <label class="f">Grundbuch von … Blatt …<input type="text" data-g="grundbuch" autocomplete="off"></label>
+      <label class="f breit">Bebauung<input type="text" data-g="gebaeude" autocomplete="off"></label>
+      <label class="f breit">Bodenrichtwert<input type="text" data-g="brw" autocomplete="off"></label>
+      <div class="gs-status" aria-live="polite"></div>`;
+    MK_GS_FELDER.forEach(f => { k.querySelector(`[data-g="${f}"]`).value = g[f] || ""; });
+    mkGsListe.appendChild(k);
+  });
+  if (fokus){ const k = mkGsListe.lastElementChild; if (k) k.querySelector('[data-g="anschrift"]').focus(); }
+}
+const mkGsVon = el => { const k = el.closest(".gs"); return k ? {k, g: mkGs[+k.dataset.i]} : {}; };
+const mkGsStatus = (k, t, art = "") => { const p = k.querySelector(".gs-status"); p.textContent = t; p.dataset.art = art; };
+let mkAdrTimer = null, mkAdrLauf = 0;
+function mkAdrListe(k, treffer, aktiv){
+  const l = k.querySelector(".adr-liste"), inp = k.querySelector('[data-g="anschrift"]');
+  k._treffer = treffer; k._aktiv = aktiv;
+  l.hidden = !treffer.length; inp.setAttribute("aria-expanded", String(!l.hidden));
+  l.innerHTML = treffer.map((f, i) => `<div class="adr-eintrag${i === aktiv ? " aktiv" : ""}" role="option" data-t="${i}">${mkEsc(mkAdrText(f.properties))}</div>`).join("");
+}
+mkGsListe.addEventListener("input", e => {
+  const {k, g} = mkGsVon(e.target), f = e.target.dataset.g; if (!g || !f) return;
+  g[f] = e.target.value; mkStand();
+  if (f !== "anschrift") return;
+  g.lat = g.lon = null;
+  const q = e.target.value.trim(); clearTimeout(mkAdrTimer);
+  if (q.length < 4){ mkAdrListe(k, [], -1); return; }
+  mkAdrTimer = setTimeout(async () => { const nr = ++mkAdrLauf;
+    try{ const r = await fetch(`${MK_PHOTON}?q=${encodeURIComponent(q)}&lang=de&limit=8&bbox=${MK_BBOX_BB}`); if (!r.ok) throw 0; const j = await r.json(); if (nr !== mkAdrLauf) return;
+      const ges = new Set(); const t = (j.features || []).filter(x => { const a = mkAdrText(x.properties); if (!a || ges.has(a)) return false; ges.add(a); return true; });
+      mkAdrListe(k, document.activeElement === e.target ? t : [], -1);
+      mkGsStatus(k, t.length ? "" : "Keine passende Adresse in Brandenburg gefunden – Angaben bitte von Hand eintragen.", t.length ? "" : "warn");
+    }catch(x){ if (nr === mkAdrLauf) mkGsStatus(k, "Adresssuche nicht erreichbar – Angaben bitte von Hand eintragen.", "warn"); } }, 280);
+});
+mkGsListe.addEventListener("keydown", e => {
+  if (e.target.dataset.g !== "anschrift") return; const {k, g} = mkGsVon(e.target); const t = k._treffer || [];
+  if (!t.length) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); mkAdrListe(k, t, ((k._aktiv ?? -1) + (e.key === "ArrowDown" ? 1 : -1) + t.length) % t.length); }
+  else if (e.key === "Enter" && k._aktiv >= 0){ e.preventDefault(); mkGsWaehlen(k, g, t[k._aktiv]); }
+  else if (e.key === "Escape") mkAdrListe(k, [], -1);
+});
+mkGsListe.addEventListener("mousedown", e => { const it = e.target.closest(".adr-eintrag"); if (!it) return; e.preventDefault();
+  const {k, g} = mkGsVon(it); mkGsWaehlen(k, g, k._treffer[+it.dataset.t]); });
+mkGsListe.addEventListener("focusout", e => { if (e.target.dataset.g === "anschrift"){ const {k} = mkGsVon(e.target); setTimeout(() => mkAdrListe(k, [], -1), 150); } });
+mkGsListe.addEventListener("click", e => {
+  if (!e.target.closest("[data-weg]")) return; const {g} = mkGsVon(e.target); const i = mkGs.indexOf(g);
+  if ((g.anschrift || g.flurstueck) && !confirm(`Grundstück ${i + 1} entfernen?`)) return;
+  mkGs.splice(i, 1); geaendert = true; mkGsAufbauen(); mkStand();
+});
+document.getElementById("gsPlus").onclick = () => { mkGs.push(mkLeerGs()); geaendert = true; mkGsAufbauen(true); mkStand(); };
+function mkGsWaehlen(k, g, f){
+  const [lon, lat] = f.geometry.coordinates, p = f.properties;
+  g.anschrift = mkAdrText(p); g.lat = lat; g.lon = lon; g._hnr = p.housenumber || "";
+  k.querySelector('[data-g="anschrift"]').value = g.anschrift; mkAdrListe(k, [], -1); geaendert = true;
+  mkGsAbrufen(k, g);
+}
+async function mkGsAbrufen(k, g){
+  mkGsStatus(k, "Liegenschaftskataster und Bodenrichtwert werden abgerufen …");
+  const lat = +g.lat, lon = +g.lon, fehl = [];
+  const setze = (f, v) => { g[f] = v == null ? "" : String(v); const el = k.querySelector(`[data-g="${f}"]`); if (el) el.value = g[f]; };
+  let flGeo = null;
+  try{
+    const fj = await mkGeo(`${MK_ALKIS}flurstueck/items?f=json&limit=20&bbox=${mkBox(lon, lat, 0.00002)}`);
+    let fs = fj.features || []; const drin = fs.filter(x => mkEnthaelt(x.geometry, lon, lat)); if (drin.length) fs = drin;
+    const hn = String(g._hnr || "").toLowerCase();
+    fs.sort((x, y) => ((y.properties.lagebeztxt || "").toLowerCase().includes(hn) ? 1 : 0) - ((x.properties.lagebeztxt || "").toLowerCase().includes(hn) ? 1 : 0));
+    const f = fs[0];
+    if (!f) throw new Error("kein Flurstück");
+    const q = f.properties; flGeo = f.geometry;
+    setze("gemarkung", q.gemarkung || ""); setze("flur", q.flur != null ? String(+q.flur || q.flur) : "");
+    setze("flurstueck", (q.flstnrzae || "") + (q.flstnrnen ? "/" + q.flstnrnen : ""));
+    setze("flaeche", q.flaeche ? mkZahl(Math.round(+q.flaeche)) : ""); setze("gemeinde", q.gemeinde || "");
+  }catch(x){ fehl.push("Liegenschaftskataster"); }
+  try{
+    if (flGeo){
+      const gj = await mkGeo(`${MK_ALKIS}gebaeude_bauwerk/items?f=json&limit=100&bbox=${mkBox(lon, lat, 0.0008)}`);
+      const code = b => +(String(b.properties.gfkzshh || "").split("_")[1] || 0);
+      const neben = c => (c >= 2460 && c <= 2465) || (c >= 2500 && c < 2600) || (c >= 2700 && c < 2800);
+      const geb = (gj.features || []).filter(b => mkEnthaelt(flGeo, ...mkMitte(b.geometry)));
+      const haupt = geb.filter(b => !neben(code(b))).sort((x, y) => mkFlaecheM2(y.geometry) * Math.max(1, +y.properties.anzahlgs || 1) - mkFlaecheM2(x.geometry) * Math.max(1, +x.properties.anzahlgs || 1));
+      const b = haupt[0];
+      setze("gebaeude", !geb.length ? "unbebaut (laut Kataster)" : b
+        ? `${b.properties.funktion || "Gebäude"}${b.properties.anzahlgs ? `, ${b.properties.anzahlgs} Geschoss${+b.properties.anzahlgs > 1 ? "e" : ""}` : ""}, Grundfläche ca. ${mkZahl(Math.round(mkFlaecheM2(b.geometry)))} m²` + (geb.length > 1 ? ` (dazu ${geb.length - 1} weitere${geb.length - 1 > 1 ? "" : "s"} Gebäude)` : "")
+        : `${geb.length} Nebengebäude`);
+    }
+  }catch(x){ /* Gebäude sind nur ergänzend */ }
+  try{
+    const j = await mkGeo(`${MK_BORIS}?f=json&limit=200&bbox=${mkBox(lon, lat, 0.00002)}`);
+    let fs = (j.features || []).filter(x => x.properties && x.properties.bodenrichtwert != null);
+    const drin = fs.filter(x => mkEnthaelt(x.geometry, lon, lat)); if (drin.length) fs = drin;
+    if (!fs.length) throw new Error("kein Richtwert");
+    const baureif = x => ["1000", "B"].includes(String(x.properties.entwicklungszustand)); if (fs.some(baureif)) fs = fs.filter(baureif);
+    const neu = fs.map(x => x.properties.stichtag || "").sort().pop();
+    const am = fs.filter(x => (x.properties.stichtag || "") === neu).sort((a, b) => mkFlaecheM2(a.geometry) - mkFlaecheM2(b.geometry));
+    const q = am[0].properties;
+    setze("brw", `${mkZahl(+q.bodenrichtwert)} €/m² (Stichtag ${nachDeutsch(q.stichtag || "")}${q.bodenrichtwertzoneName ? ", " + q.bodenrichtwertzoneName : ""})`);
+  }catch(x){ fehl.push("Bodenrichtwert"); }
+  mkStand();
+  mkGsStatus(k, fehl.length ? `${fehl.join(" und ")} konnte nicht abgerufen werden – bitte von Hand eintragen.` : "Übernommen aus ALKIS (Flurstück, Fläche, Gebäude) und BORIS Brandenburg (Bodenrichtwert). Bitte prüfen.", fehl.length ? "warn" : "ok");
+}
+const mkGsMitInhalt = () => mkGs.filter(g => MK_GS_FELDER.some(f => (g[f] || "").trim()));
+function mkGsVorschlag(){
+  const g = gegAuswahl();
+  if (!mkGs.length && (g.includes("Kaufvertrag") || g.includes("Übertragung"))){ mkGs.push(mkLeerGs()); mkGsAufbauen(); }
 }
 
 /* ---------- Gegenstand geändert ---------- */
-gegChips.addEventListener("click", () => setTimeout(() => { mkRollenVorschlag(); mkLfAufbauen(); mkBerechnungHinweis(); mkStand(); }, 0));
+gegChips.addEventListener("click", () => setTimeout(() => { mkRollenVorschlag(); mkGsVorschlag(); mkBerechnungHinweis(); mkStand(); }, 0));
 gegSonst.addEventListener("input", () => mkStand());
 function mkBerechnungHinweis(){
   const v = [...new Set(gegAuswahl().map(g => MK_BERECHNUNG[g]).filter(Boolean))];
@@ -2137,7 +2231,8 @@ const mkDe = iso => iso ? nachDeutsch(iso) : "";
 function mkKurz(n){
   if (n === 1) return [wert("vorgang_nr") && "Nr. " + wert("vorgang_nr"), wert("gegenstand"), [mkDe(wert("vorgespr_datum")), wert("vorgespr_zeit") && wert("vorgespr_zeit") + " Uhr"].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
   if (n === 2) return mkMitName().map(b => mkName(b) + (b.rolle ? ` (${b.rolle})` : "")).join(", ");
-  if (n === 3){ const a = mkSvAbschnitte(), f = wert("sachverhalt_text"); return a.length ? a.map(x => x.t).join(", ") + (f ? ", weitere Angaben" : "") : (f ? f.slice(0, 80) : ""); }
+  if (n === 3){ const g = mkGsMitInhalt().map(x => x.anschrift || ("Flurstück " + x.flurstueck)), f = wert("sachverhalt_text");
+    return [g.length ? g.join("; ") : "", f ? f.slice(0, 80) : ""].filter(Boolean).join(" · "); }
   if (n === 4) return [esKasten.checked && "Erbspiegel", gwKasten.checked && "Geschäftswert", document.getElementById("cbKosten").checked && "Kostenberechnung"].filter(Boolean).join(", ");
   if (n === 5) return [mkAuftraggeber().length && "Auftraggeber: " + mkAuftraggeber().map(mkName).join(", "), istAn("cb_termin") && wert("termin_am") && "Termin " + mkDe(wert("termin_am")), istAn("cb_kein_termin") && "reiner Entwurfsauftrag"].filter(Boolean).join(" · ");
   return "";
@@ -2189,7 +2284,7 @@ function mkDaten(){
   return { version: 1,
     felder: Object.fromEntries(felder().map(el => [el.dataset.f, el.type === "checkbox" ? el.checked : el.value])),
     beteiligte: mkBets.map(b => Object.assign({}, b)),
-    sv: Object.fromEntries(Object.entries(mkSv).filter(([, x]) => (x.v || "").trim())) };
+    grundstuecke: mkGsMitInhalt().map(g => { const o = Object.assign({}, g); delete o._hnr; return o; }) };
 }
 function mkKostenMitNamen(t){
   return (t || "").split(/\s*;\s*/).filter(Boolean).map(teil => {
@@ -2323,18 +2418,29 @@ async function pdfErzeugen(){
     feldText(det ? [...kopfSegs, {t: "\n" + det}] : kopfSegs);
   });
 
-  ueberschrift("3", "Sachverhalt, Vorgaben und Wünsche");
-  const abschnitte = mkSvAbschnitte(), frei = wert("sachverhalt_text").trim();
-  if (!abschnitte.length && !frei) feldText([], {minZeilen: 6});
-  abschnitte.forEach((a, i) => { if (i) y -= 4; platz(LH * 2 + 10); feldText([{t: a.t, f: fB, c: BLAU}, {t: "\n" + a.v}]); });
-  if (frei){ if (abschnitte.length){ y -= 4; platz(LH * 2 + 10); feldText([{t: "Weitere Angaben", f: fB, c: BLAU}, {t: "\n" + frei}]); } else feldText([{t: frei}]); }
+  let nr = 3;
+  const gs = mkGsMitInhalt();
+  if (gs.length){
+    ueberschrift(String(nr++), gs.length > 1 ? "Grundbesitz" : "Grundstück");
+    gs.forEach((g, i) => {
+      if (i) y -= 4;
+      const lage = [g.gemarkung && "Gemarkung " + g.gemarkung, g.flur && "Flur " + g.flur, g.flurstueck && "Flurstück " + g.flurstueck, g.flaeche && g.flaeche + " m²"].filter(Boolean).join(", ");
+      const zeilen = [lage, g.gemeinde && "Gemeinde " + g.gemeinde, g.grundbuch && "Grundbuch von " + g.grundbuch.replace(/^Grundbuch von\s*/i, ""), g.gebaeude && "Bebauung: " + g.gebaeude, g.brw && "Bodenrichtwert: " + g.brw]
+        .map(x => (x || "").trim()).filter(Boolean);
+      platz(LH * 2 + 10);
+      feldText([{t: (gs.length > 1 ? `${i + 1}. ` : "") + (g.anschrift || "Grundstück"), f: fB}, ...zeilen.map(x => ({t: "\n" + x}))]);
+    });
+  }
+  ueberschrift(String(nr++), "Sachverhalt, Vorgaben und Wünsche");
+  const frei = wert("sachverhalt_text").trim();
+  feldText(frei ? [{t: frei}] : [], {minZeilen: 6});
 
   /* ---------- Auftrag an den Notar (neue Seite) ---------- */
   neueSeite();
   const titel2 = "AUFTRAG AN DEN NOTAR";
   text(titel2, (W - breite(titel2, fB, 14)) / 2, 722, {f: fB, gr: 14, c: BLAU});
   y = 718;
-  ueberschrift("4", "Auftraggeber");
+  ueberschrift(String(nr++), "Auftraggeber");
   const ag = mkAuftraggeber().map(mkNameLang);
   y -= 12; platz(20);
   text("Auftraggeber:", X0, y, {gr: 9.5});
@@ -2343,7 +2449,7 @@ async function pdfErzeugen(){
     s.drawRectangle({x: 130, y: y + 11.5 - h, width: X1 - 130, height: h, color: FELD});
     z.forEach((zz, i) => zeileZeichnen(zz, 133, y - i * 11, 9)); y -= h - 10; }
 
-  ueberschrift("5", "Art des Auftrags");
+  ueberschrift(String(nr++), "Art des Auftrags");
   y -= 3; text("Der Notar Thomas Woinar wird hiermit beauftragt und bevollmächtigt:", X0, y, {gr: 9, c: GRAU});
   y += 2;
   kreuzZeile(istAn("cb_register"), [{t: "öffentliche Register, das Grundbuch und Akten einzusehen und Dokumente/Urkunden anzufordern"}], X0);
@@ -2355,15 +2461,15 @@ async function pdfErzeugen(){
   kreuzZeile(istAn("cb_termin"), [{t: "Beurkundungstermin", f: fB}, {t: "ist vereinbart für den:"}], X0, {feld: true, feldX: 247, feldB: 120, wert: mkDe(wert("termin_am"))});
   kreuzZeile(istAn("cb_kein_termin"), [{t: "Beurkundungsauftrag wird heute"}, {t: "noch nicht", f: fB}, {t: "erteilt (zunächst nur reiner Entwurfsauftrag)"}], X0);
 
-  ueberschrift("6", "Sonstiges / Bemerkungen");
+  ueberschrift(String(nr++), "Sonstiges / Bemerkungen");
   y += 2; feldText(wert("bemerkungen") ? [{t: wert("bemerkungen")}] : [], {minZeilen: 3});
 
-  ueberschrift("7", "Wichtige Hinweise");
+  ueberschrift(String(nr++), "Wichtige Hinweise");
   const hh = HINW.top - HINW.bottom; platz(hh + 4);
   s.drawPage(hinwBlock, {x: HINW.left, y: y + 4 - hh}); y -= hh - 6;
 
   /* Unterschriften: je Beteiligter eine Zeile (zwei nebeneinander) */
-  ueberschrift("8", "Unterschriften");
+  ueberschrift(String(nr++), "Unterschriften");
   absatz("Die Beteiligten bestätigen die Richtigkeit der Sachverhaltsaufnahme und erteilen den Auftrag wie angekreuzt.", {c: GRAU});
   const unterz = bets.length ? bets : [mkLeerBet(), mkLeerBet()];
   const SPW = 245, SPX = [X0, X1 - SPW];
@@ -2404,7 +2510,11 @@ async function bogenLaden(bytes, name){
   if (m && m.felder){
     for (const el of felder()){ if (el.type === "checkbox") el.checked = false; else el.value = ""; }
     for (const el of felder()){ const v = m.felder[el.dataset.f]; if (v === undefined) continue; if (el.type === "checkbox") el.checked = !!v; else el.value = v; }
-    mkBets = (m.beteiligte || []).map(b => Object.assign(mkLeerBet(), b)); mkSv = m.sv || {};
+    mkBets = (m.beteiligte || []).map(b => Object.assign(mkLeerBet(), b));
+    mkGs = (m.grundstuecke || []).map(g => Object.assign(mkLeerGs(), g));
+    /* Bögen aus der ersten Fassung (Leitfragen): Abschnitte vor den freien Text setzen */
+    const sv = Object.values(m.sv || {}).filter(x => (x.v || "").trim());
+    if (sv.length){ const f = document.querySelector('[data-f="sachverhalt_text"]'); f.value = sv.map(x => `${x.t}:\n${x.v.trim()}`).concat(f.value.trim() ? [f.value.trim()] : []).join("\n\n"); }
   } else {
     let form = null, namen = new Set();
     try{ form = doc.getForm(); namen = new Set(form.getFields().map(f => f.getName())); }catch(e){}
@@ -2416,14 +2526,14 @@ async function bogenLaden(bytes, name){
       else { const v = form.getTextField(n).getText() || ""; el.value = el.dataset.date !== undefined ? nachIso(v) : v; }
     }
     mkBets = ["bet1_name", "bet2_name"].map(wert).filter(Boolean).map(n => Object.assign(mkLeerBet(true), {name: n}));
-    mkSv = {}; alt = true;
+    mkGs = []; alt = true;
   }
   if (!mkBets.length) mkBets.push(mkLeerBet(true));
   document.querySelectorAll("[data-zeigen-wenn][data-leeren]").forEach(c => {
     const b = c.dataset.zeigenWenn; if (!b.startsWith("!") && hatInhalt(c)){ const k = document.querySelector(`[data-f="${b}"]`); if (k) k.checked = true; }
   });
   gegenstandAnzeigen(); kostenZuruecksetzen(); dynamik();
-  mkBetAufbauen(); mkLfAufbauen(); mkBerechnungHinweis();
+  mkBetAufbauen(); mkGsAufbauen(); mkBerechnungHinweis();
   await erbspiegelAusPdf(doc);
   await geschaeftswertAusPdf(doc);
   if (typeof kostenAusPdf === "function") kostenAusPdf(doc);
@@ -2431,12 +2541,12 @@ async function bogenLaden(bytes, name){
   if (alt && !mkAlles){ mkAlles = true; mkOeffnen(1, false); }   // älterer Bogen: alles auf einen Blick (ohne die Einstellung zu ändern)
   else mkOeffnen(1, false);
   window.scrollTo(0, 0);
-  meldung(`„${name}“ geöffnet${alt ? " (älterer Vorgesprächsbogen: Auftraggeber stehen bei den Beteiligten, Sachverhalt unter „Weitere Angaben“)" : ""}. Änderungen mit „Vorgespräch ablegen“ speichern.`);
+  meldung(`„${name}“ geöffnet${alt ? " (älterer Vorgesprächsbogen: Auftraggeber stehen bei den Beteiligten)" : ""}. Änderungen mit „Vorgespräch ablegen“ speichern.`);
 }
 
 function mkLeeren(){
-  mkBets = [mkLeerBet(true), mkLeerBet(false)]; mkSv = {};
-  mkBetAufbauen(); mkLfAufbauen(); mkBerechnungHinweis(); mkAgSync();
+  mkBets = [mkLeerBet(true), mkLeerBet(false)]; mkGs = [];
+  mkBetAufbauen(); mkGsAufbauen(); mkBerechnungHinweis(); mkAgSync();
 }
 function neu(){
   if ((geaendert || erbspiegelHatInhalt() || bewertungHatInhalt()) && !confirm("Alle Eingaben (einschließlich Beteiligte, Erbspiegel und Geschäftswert) leeren und einen neuen Bogen beginnen?")) return;
@@ -2525,6 +2635,6 @@ mkLeeren(); mkBarHoehe(); mkOeffnen(1, false); geaendert = false;
 (async () => { await new Promise(r => setTimeout(r, 300)); mkPruefen(); })();
 </script>
 
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.1 · Stand 24.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.2 · Stand 24.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
