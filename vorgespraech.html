@@ -832,6 +832,11 @@ const nachIso = de => { const m=/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(de.trim()
 const vorgangWert = () => document.querySelector('[data-f="vorgang_nr"]').value.trim();
 const dateiname = () => vorgangWert().replace(/[\\/:*?"<>|]/g,"-") + " Vorgespräch.pdf";
 
+const FELDER_SCHLUESSEL = "WoinarVorgespraechFelder";
+/* gesicherte Eingaben aus dem PDF lesen (null, wenn der Bogen älter ist) */
+function felderSicherung(doc){
+  try{ const roh = doc.getInfoDict().lookup(PDFLib.PDFName.of(FELDER_SCHLUESSEL)); const d = roh && roh.decodeText ? JSON.parse(roh.decodeText()) : null; return d && d.felder ? d.felder : null; }catch(e){ return null; }
+}
 async function pdfErzeugen(){
   const bytes = Uint8Array.from(atob(VORLAGE_B64), c=>c.charCodeAt(0));
   const doc = await PDFLib.PDFDocument.load(bytes);
@@ -848,6 +853,11 @@ async function pdfErzeugen(){
       if ((n==="gegenstand" || n==="kosten_traeger") && v.length > 45) f.setFontSize(0);   // sehr langer Text: Schrift automatisch verkleinern
     }
   }
+  /* Sicherung: alle Eingaben zusätzlich unsichtbar im PDF (Dokumenteigenschaften). Manche
+     Unterschriftsprogramme leeren beim Speichern die Formularfelder – „Bogen öffnen“ stellt
+     den Inhalt dann aus dieser Sicherung wieder her. */
+  const sicherung = {}; for (const el of felder()) sicherung[el.dataset.f] = el.type==="checkbox" ? el.checked : el.value;
+  doc.getInfoDict().set(PDFLib.PDFName.of(FELDER_SCHLUESSEL), PDFLib.PDFHexString.fromText(JSON.stringify({version:1, felder:sicherung})));
   if (typeof erbspiegelMitnehmen === "function") await erbspiegelMitnehmen(doc);
   if (typeof geschaeftswertMitnehmen === "function") await geschaeftswertMitnehmen(doc);
   if (typeof kostenMitnehmen === "function") await kostenMitnehmen(doc);
@@ -883,7 +893,7 @@ async function ablegen(){
   if (!dateisystemOk){
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([pdf],{type:"application/pdf"}));
     a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-    gegNutzungMerken(); geaendert=false; meldung(`„${name}“ wurde heruntergeladen.`); return true;
+    gegNutzungMerken(); geaendert=false; entwurfErledigt(); meldung(`„${name}“ wurde heruntergeladen.`); return true;
   }
   const dir = await ordnerMitRecht();
   let vorhanden = true;
@@ -891,20 +901,25 @@ async function ablegen(){
   if (vorhanden && !confirm(`„${name}“ ist im Ordner „${dir.name}“ bereits vorhanden.\n\nÜberschreiben?`)) return false;
   await schreibenMitWiederholung(dir, name, pdf);
   gegNutzungMerken();
-  geaendert=false; meldung(`Abgelegt: „${name}“ im Ordner „${dir.name}“.`);
+  geaendert=false; entwurfErledigt(); meldung(`Abgelegt: „${name}“ im Ordner „${dir.name}“.`);
   return true;
 }
 
 /* ---------- Vorhandenen Bogen öffnen ---------- */
 async function bogenLaden(bytes, name){
-  const doc = await PDFLib.PDFDocument.load(bytes);
-  const form = doc.getForm();
-  const namen = new Set(form.getFields().map(f=>f.getName()));
-  if (!namen.has("sachverhalt_text")) throw new Error("Diese Datei ist kein Vorgesprächsbogen.");
+  const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption: true});
+  let form = null, namen = new Set();
+  try{ form = doc.getForm(); namen = new Set(form.getFields().map(f=>f.getName())); }catch(e){}
+  const sich = felderSicherung(doc);
+  if (!namen.has("sachverhalt_text") && !sich) throw new Error("Diese Datei ist kein Vorgesprächsbogen.");
+  let gerettet = 0;
   for (const el of felder()){
-    const n=el.dataset.f; if (!namen.has(n)) continue;
-    if (el.type==="checkbox") el.checked = form.getCheckBox(n).isChecked();
-    else { const v=form.getTextField(n).getText()||""; el.value = el.dataset.date!==undefined ? nachIso(v) : v; }
+    const n=el.dataset.f, s = sich ? sich[n] : undefined;
+    let feld; try{ feld = namen.has(n) ? (el.type==="checkbox" ? form.getCheckBox(n).isChecked() : (form.getTextField(n).getText()||"")) : undefined; }catch(e){ feld = undefined; }
+    if (el.type==="checkbox"){ const v = feld || (s===true); if (v && !feld) gerettet++; el.checked = !!v; }
+    else { let v = feld || "";
+      if (!v && typeof s === "string" && s){ v = s; gerettet++; el.value = v; }   // aus der Sicherung (schon im Format des Formulars)
+      else el.value = el.dataset.date!==undefined ? nachIso(v) : v; }
   }
   document.querySelectorAll("[data-zeigen-wenn][data-leeren]").forEach(c=>{
     const b=c.dataset.zeigenWenn; if (!b.startsWith("!") && hatInhalt(c)){ const k=document.querySelector(`[data-f="${b}"]`); if(k) k.checked=true; }
@@ -914,7 +929,8 @@ async function bogenLaden(bytes, name){
   await geschaeftswertAusPdf(doc);
   if (typeof kostenAusPdf === "function") kostenAusPdf(doc);
   geaendert=false;
-  meldung(`„${name}“ geöffnet. Änderungen mit „Vorgespräch ablegen“ speichern.`);
+  meldung(gerettet ? `„${name}“ geöffnet. Die Formularfelder im PDF waren leer (z. B. durch ein Unterschriftsprogramm); ${gerettet} Eingaben wurden aus der Sicherung im PDF wiederhergestellt. Bitte prüfen und mit „Vorgespräch ablegen“ neu speichern.`
+                   : `„${name}“ geöffnet. Änderungen mit „Vorgespräch ablegen“ speichern.`, gerettet ? "err" : "ok");
 }
 async function oeffnen(){
   if (geaendert && !confirm("Ungespeicherte Eingaben gehen verloren. Trotzdem einen anderen Bogen öffnen?")) return;
@@ -931,10 +947,64 @@ async function oeffnen(){
 }
 function neu(){
   if ((geaendert || erbspiegelHatInhalt() || bewertungHatInhalt()) && !confirm("Alle Eingaben (einschließlich Erbspiegel und Geschäftswert) leeren und einen neuen Bogen beginnen?")) return;
-  erbspiegelAus(); geschaeftswertAus(); if (typeof kostenAus === "function") kostenAus();
+  erbspiegelAus(); geschaeftswertAus(); if (typeof kostenAus === "function") kostenAus(); entwurfErledigt();
   vorbelegen(); document.getElementById("msg").innerHTML=""; window.scrollTo(0,0);
   document.querySelector('[data-f="vorgang_nr"]').focus();
 }
+
+/* ---------- Entwurf automatisch sichern ----------
+   Solange der Bogen nicht abgelegt ist, wird er alle paar Sekunden als PDF im Browser
+   dieses PCs gesichert (IndexedDB, nichts geht ins Internet). Wird das Fenster ohne
+   Ablegen geschlossen, bietet der Bogen beim nächsten Öffnen die Wiederherstellung an.
+   Nach dem Ablegen oder „Neuer Bogen“ wird der Entwurf gelöscht, nach 30 Tagen spätestens. */
+const ENTWURF_ART = "klassisch";
+const ENTWURF_ID = (() => { try{ let i = sessionStorage.getItem("vgEntwurfId"); if (!i){ i = Date.now().toString(36) + Math.random().toString(36).slice(2, 8); sessionStorage.setItem("vgEntwurfId", i); } return i; }catch(e){ return "t" + Date.now(); } })();
+function entwurfDb(){ return new Promise((res, rej) => { const r = indexedDB.open("vorgespraech-entwuerfe", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("e"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function entwurfTx(modus, f){ try{ const db = await entwurfDb(); return await new Promise(r => { const t = db.transaction("e", modus); const s = t.objectStore("e"); const erg = f(s); t.oncomplete = () => r(erg && "result" in erg ? erg.result : undefined); t.onerror = () => r(undefined); }); }catch(e){ return undefined; } }
+let entwurfStand = 0, entwurfGesichert = 0, entwurfZeit = 0, entwurfLaeuft = false;
+["input", "change"].forEach(t => document.addEventListener(t, () => { entwurfStand++; }, true));
+async function entwurfSichern(){
+  if (entwurfLaeuft || !geaendert || (entwurfStand === entwurfGesichert && Date.now() - entwurfZeit < 30000)) return;
+  entwurfLaeuft = true; const stand = entwurfStand;
+  try{ const pdf = await pdfErzeugen();
+    await entwurfTx("readwrite", s => s.put({art: ENTWURF_ART, zeit: Date.now(), vorgang: vorgangWert() || "", pdf}, ENTWURF_ID));
+    entwurfGesichert = stand; entwurfZeit = Date.now(); }
+  catch(e){} finally{ entwurfLaeuft = false; }
+}
+function entwurfErledigt(){ entwurfGesichert = entwurfStand; entwurfTx("readwrite", s => s.delete(ENTWURF_ID)); }
+setInterval(entwurfSichern, 8000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") entwurfSichern(); });
+async function entwurfAngebot(){
+  const alle = await entwurfTx("readonly", s => s.getAll()) || [], schl = await entwurfTx("readonly", s => s.getAllKeys()) || [];
+  const grenze = Date.now() - 30*864e5, liste = [];
+  alle.forEach((e, i) => { if (!e || e.zeit < grenze) entwurfTx("readwrite", s => s.delete(schl[i]));
+    else if (e.art === ENTWURF_ART && schl[i] !== ENTWURF_ID) liste.push({k: schl[i], e}); });
+  if (!liste.length) return;
+  liste.sort((a, b) => b.e.zeit - a.e.zeit);
+  const m = document.getElementById("msg"); m.innerHTML = "";
+  const d = document.createElement("div"); d.className = "err"; m.appendChild(d);
+  const kopf = document.createElement("b"); kopf.textContent = liste.length === 1 ? "Ein Vorgesprächsbogen wurde nicht abgelegt:" : `${liste.length} Vorgesprächsbögen wurden nicht abgelegt:`; d.appendChild(kopf);
+  for (const {k, e} of liste){
+    const z = document.createElement("div"); z.style.cssText = "padding:6px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center";
+    const t = document.createElement("span"); const dt = new Date(e.zeit);
+    t.textContent = `${e.vorgang ? "Vorgang " + e.vorgang : "ohne Vorgangs-Nr."} · zuletzt bearbeitet ${dt.toLocaleDateString("de-DE")} ${dt.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"})} Uhr`;
+    const b1 = document.createElement("button"); b1.type = "button"; b1.textContent = "Wiederherstellen";
+    const b2 = document.createElement("button"); b2.type = "button"; b2.textContent = "Verwerfen";
+    b1.onclick = async () => {
+      if (geaendert && !confirm("Die aktuellen Eingaben werden durch den Entwurf ersetzt. Fortfahren?")) return;
+      try{ await bogenLaden(e.pdf.buffer ? e.pdf.buffer.slice(e.pdf.byteOffset, e.pdf.byteOffset + e.pdf.byteLength) : e.pdf, "Entwurf");
+        await entwurfTx("readwrite", s => s.delete(k)); geaendert = true; entwurfStand++;
+        meldung(`Entwurf${e.vorgang ? " zu Vorgang " + e.vorgang : ""} wiederhergestellt. Bitte jetzt mit „Vorgespräch ablegen“ speichern.`, "err");
+        entwurfSichern(); }
+      catch(x){ fehler(x); } };
+    b2.onclick = async () => { if (!confirm(`Entwurf${e.vorgang ? " zu Vorgang " + e.vorgang : ""} endgültig verwerfen?`)) return;
+      await entwurfTx("readwrite", s => s.delete(k)); z.remove(); if (!d.querySelector("button")) m.innerHTML = ""; };
+    z.append(t, b1, b2); d.appendChild(z);
+  }
+  window.scrollTo(0, 0);
+}
+setTimeout(() => entwurfAngebot(), 600);
 
 /* ---------- E-Mail an Mitarbeiter (Outlook-Entwurf mit Anhang) ----------
    Mitarbeiterliste hier pflegen: Name und E-Mail-Adresse.                  */
@@ -1938,6 +2008,6 @@ function kostenAusPdf(doc){
   if (nur==="kosten"){ krKasten.checked = true; krKasten.dispatchEvent(new Event("change")); weg(krKasten.closest("label")); }
 })();
 </script>
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.32 · Stand 25.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.33 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
