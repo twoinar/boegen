@@ -41,6 +41,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .msg div{padding:10px 14px;border-radius:4px;font-size:13px}
 .msg .ok{background:var(--ok-bg);color:var(--ok)}
 .msg .err{background:var(--err-bg);color:var(--err)}
+button.legt-ab{opacity:.75;cursor:progress}
+button.abgelegt{animation:abgelegt 1.6s ease-out}
+@keyframes abgelegt{0%{filter:brightness(1.9);box-shadow:0 0 0 6px rgba(46,160,67,.45)}100%{filter:none;box-shadow:0 0 0 0 rgba(46,160,67,0)}}
+.mk-toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:50;max-width:min(680px,calc(100vw - 32px));padding:12px 18px;border-radius:6px;font-size:14px;line-height:1.4;box-shadow:0 8px 28px rgba(0,0,0,.25);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+.mk-toast.zeigen{opacity:1;transform:translate(-50%,0)}
+.mk-toast.ok{background:#1e7b3a;color:#fff;border:1px solid #16602d;font-weight:bold}
+.mk-toast.err{background:#b31c1c;color:#fff;border:1px solid #8e1515;font-weight:bold}
+@media print{.mk-toast{display:none}}
 
 /* ---------- Blatt ---------- */
 .sheet{max-width:880px;margin:16px auto 40px;background:var(--sheet);padding:36px 44px 40px;
@@ -357,7 +365,8 @@ section.eingeklappt .klapp-info{display:block}
 
 <div class="bar"><div class="bar-inner">
   <div class="folder" id="ordnerAnzeige">Ablageordner: <b>noch nicht gewählt</b></div>
-  <button type="button" id="btnOrdner">Ablageordner wählen</button>
+  <button type="button" id="btnOrdner" title="Ordner, in dem die Beteiligten unterschreiben">Ablageordner wählen</button>
+  <button type="button" id="btnOrdner2" title="Kopie für die Vorgangsakte, dort sucht auch das Claude-Fenster">Kopie-Ordner wählen</button>
   <button type="button" id="btnOeffnen">Bogen öffnen</button>
   <button type="button" id="btnNeu">Neuer Bogen</button>
   <button type="button" id="btnDrucken">Drucken</button>
@@ -801,10 +810,12 @@ async function idbGet(k){ try{ const db=await idb(); return await new Promise(r=
 async function idbSet(k,v){ try{ const db=await idb(); await new Promise(r=>{ const t=db.transaction("kv","readwrite"); t.objectStore("kv").put(v,k); t.oncomplete=r; t.onerror=r; }); }catch{} }
 const dateisystemOk = "showDirectoryPicker" in window;
 let ordner = null;
+let ordner2 = null;      // Kopie für die Vorgangsakte (wie in der Maske)
 function zeigeOrdner(){
+  const n = o => o ? `<b>${o.name.replace(/[<>&]/g, "")}</b>` : "<b>noch nicht gewählt</b>";
   document.getElementById("ordnerAnzeige").innerHTML = !dateisystemOk
     ? "Direkte Ablage nur in Chrome oder Edge möglich – hier wird heruntergeladen."
-    : ordner ? `Ablageordner: <b>${ordner.name.replace(/[<>&]/g,"")}</b>` : "Ablageordner: <b>noch nicht gewählt</b>";
+    : `Ablage: ${n(ordner)} · Kopie: ${n(ordner2)}`;
 }
 async function ordnerWaehlen(){ ordner = await window.showDirectoryPicker({id:"vorgespraech", mode:"readwrite"}); await idbSet("ordner", ordner); zeigeOrdner(); }
 async function ordnerMitRecht(){
@@ -814,7 +825,24 @@ async function ordnerMitRecht(){
   if (p!=="granted") throw new Error("Der Zugriff auf den Ablageordner wurde nicht erlaubt.");
   return ordner;
 }
-(async()=>{ if (dateisystemOk){ ordner = (await idbGet("ordner")) || null; } zeigeOrdner(); })();
+/* Kopie-Ordner: beim ersten Start der Kopie-Ordner der Maske (gleiche Vorgangsakte) */
+async function maskeKopieOrdner(){
+  try{
+    const db = await new Promise((res, rej) => { const q = indexedDB.open("vorgespraech-maske", 1);
+      q.onupgradeneeded = () => q.result.createObjectStore("kv"); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+    return await new Promise(res => { const q = db.transaction("kv").objectStore("kv").get("ordner2"); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
+  }catch(e){ return null; }
+}
+async function ordner2Waehlen(){ ordner2 = await window.showDirectoryPicker({id: "vorgespraechKopie", mode: "readwrite"}); await idbSet("ordner2", ordner2); zeigeOrdner(); }
+async function ordnerRecht(o){
+  let p = await o.queryPermission({mode: "readwrite"});
+  if (p !== "granted") p = await o.requestPermission({mode: "readwrite"});
+  if (p !== "granted") throw new Error(`Der Zugriff auf den Ordner „${o.name}“ wurde nicht erlaubt.`);
+  return o;
+}
+(async()=>{ if (dateisystemOk){ ordner = (await idbGet("ordner")) || null;
+  ordner2 = (await idbGet("ordner2")) || null;
+  if (!ordner2){ ordner2 = await maskeKopieOrdner(); if (ordner2) await idbSet("ordner2", ordner2); } } zeigeOrdner(); })();
 
 /* ---------- PDF erzeugen ---------- */
 const WINANSI_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
@@ -897,13 +925,20 @@ async function ablegen(){
     gegNutzungMerken(); geaendert=false; entwurfErledigt(); meldung(`„${name}“ wurde heruntergeladen.`); return true;
   }
   const dir = await ordnerMitRecht();
-  let vorhanden = true;
-  try { await dir.getFileHandle(name); } catch { vorhanden = false; }
-  if (vorhanden && !confirm(`„${name}“ ist im Ordner „${dir.name}“ bereits vorhanden.\n\nÜberschreiben?`)) return false;
+  let kopie = null;
+  if (ordner2){ try{ if (!(await ordner2.isSameEntry(dir))) kopie = await ordnerRecht(ordner2); }catch(e){ if (e && e.name === "AbortError") throw e; kopie = null; } }
+  const da = async o => { try{ await o.getFileHandle(name); return true; }catch(e){ return false; } };
+  const schon = []; for (const o of [dir, kopie].filter(Boolean)) if (await da(o)) schon.push(o.name);
+  if (schon.length && !confirm(`„${name}“ ist im Ordner ${schon.map(x => `„${x}“`).join(" und ")} bereits vorhanden.\n\nÜberschreiben?`)) return false;
   await schreibenMitWiederholung(dir, name, pdf);
+  let zusatz = "", art = "ok";
+  if (kopie){
+    try{ await schreibenMitWiederholung(kopie, name, pdf); zusatz = ` und als Kopie in „${kopie.name}“`; }
+    catch(e){ zusatz = ` – die Kopie in „${kopie.name}“ ist fehlgeschlagen: ${e.message || e}`; art = "err"; }
+  } else if (ordner2) zusatz = ` – keine Kopie: kein Zugriff auf „${ordner2.name}“`, art = "err";
   gegNutzungMerken();
-  geaendert=false; entwurfErledigt(); meldung(`Abgelegt: „${name}“ im Ordner „${dir.name}“.`);
-  await ablageMelden(vorhanden);
+  geaendert=false; entwurfErledigt(); meldung(`Abgelegt: „${name}“ im Ordner „${dir.name}“${zusatz}.`, art);
+  await ablageMelden(schon.length > 0);
   return true;
 }
 
@@ -1169,7 +1204,32 @@ function gwKurz(){
 window.addEventListener("beforeprint", ()=>{ textfelderAnpassen(); erbspiegelDruckAktualisieren(); geschaeftswertDruck(); });
 
 document.getElementById("btnOrdner").onclick = ()=>{ if(!dateisystemOk){ meldung("Die Ordnerauswahl gibt es nur in Chrome und Edge.","err"); return;} ordnerWaehlen().then(()=>meldung(`Ablageordner „${ordner.name}“ gespeichert.`)).catch(fehler); };
-document.getElementById("btnAblegen").onclick = ()=>ablegen().catch(fehler);
+document.getElementById("btnOrdner2").onclick = ()=>{ if(!dateisystemOk){ meldung("Die Ordnerauswahl gibt es nur in Chrome und Edge.","err"); return;} ordner2Waehlen().then(()=>meldung(`Kopie-Ordner „${ordner2.name}“ gewählt.`)).catch(fehler); };
+/* Ablegen mit sichtbarer Rückmeldung (wie in der Maske): Knopf leuchtet kurz auf, Hinweis unten mit Datei und Ordnern */
+let toastTimer = null;
+function toast(text, art = "ok"){
+  let d = document.getElementById("mkToast");
+  if (!d){ d = document.createElement("div"); d.id = "mkToast"; d.setAttribute("role", "status"); d.setAttribute("aria-live", "polite"); document.body.appendChild(d); }
+  d.className = "mk-toast " + art; d.textContent = text;
+  requestAnimationFrame(() => d.classList.add("zeigen"));
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => d.classList.remove("zeigen"), art === "ok" ? 7000 : 12000);
+}
+async function ablegenKlick(btn){
+  const text = btn.textContent;
+  btn.disabled = true; btn.classList.remove("abgelegt"); btn.classList.add("legt-ab"); btn.textContent = "Wird abgelegt …";
+  let ok = false; document.getElementById("msg").innerHTML = "";
+  try{ ok = await ablegen(); }
+  catch(e){ fehler(e); if (e && e.name === "AbortError") meldung("Ablegen abgebrochen.", "err"); }
+  finally{ btn.disabled = false; btn.classList.remove("legt-ab"); btn.textContent = text; }
+  if (!ok && !document.querySelector("#msg > div")) meldung("Nicht abgelegt.", "err");
+  const m = document.querySelector("#msg > div");
+  if (ok){
+    void btn.offsetWidth; btn.classList.add("abgelegt"); btn.textContent = "✓ Abgelegt";
+    setTimeout(() => { btn.textContent = text; btn.classList.remove("abgelegt"); }, 2500);
+  }
+  if (m && m.textContent) toast(m.textContent, ok && !m.classList.contains("err") ? "ok" : "err");
+}
+document.getElementById("btnAblegen").onclick = e => ablegenKlick(e.currentTarget);
 document.getElementById("btnOeffnen").onclick = ()=>oeffnen().catch(fehler);
 document.getElementById("btnNeu").onclick = neu;
 document.getElementById("btnDrucken").onclick = ()=>{ textfelderAnpassen(); erbspiegelDruckAktualisieren(); geschaeftswertDruck(); setTimeout(()=>window.print(), 150); };
@@ -2068,6 +2128,6 @@ function kostenAusPdf(doc){
   if (nur==="kosten"){ krKasten.checked = true; krKasten.dispatchEvent(new Event("change")); weg(krKasten.closest("label")); }
 })();
 </script>
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.37 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.38 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
