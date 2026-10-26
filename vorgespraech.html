@@ -903,6 +903,7 @@ async function ablegen(){
   await schreibenMitWiederholung(dir, name, pdf);
   gegNutzungMerken();
   geaendert=false; entwurfErledigt(); meldung(`Abgelegt: „${name}“ im Ordner „${dir.name}“.`);
+  await ablageMelden(vorhanden);
   return true;
 }
 
@@ -951,6 +952,21 @@ function neu(){
   erbspiegelAus(); geschaeftswertAus(); if (typeof kostenAus === "function") kostenAus(); entwurfErledigt();
   vorbelegen(); document.getElementById("msg").innerHTML=""; window.scrollTo(0,0);
   document.querySelector('[data-f="vorgang_nr"]').focus();
+}
+
+/* ---------- Benachrichtigung „Vorgespräch abgelegt“ ----------
+   Nach dem Ablegen in den Ordner meldet der Bogen dem Server Vorgangsnummer und Bogenart; der Server
+   (tools-mail) schickt dem Sekretariat eine kurze Mail ohne Mandantendaten. Empfänger stehen auf dem Server. */
+async function ablageMelden(erneut){
+  if (!location.protocol.startsWith("http")) return;
+  let t = "";
+  try{ const r = await fetch("/api/mail/ablage", {method: "POST", headers: {"Content-Type": "application/json"},
+         body: JSON.stringify({vorgang: vorgangWert(), bogen: "klassisch", erneut: !!erneut})});
+       const d = await r.json().catch(() => ({}));
+       if (r.ok) t = ` Benachrichtigung an ${(d.an || []).join(", ")} verschickt.`;
+       else if (r.status !== 503) t = ` Achtung: Die Benachrichtigungs-Mail ging nicht raus (${d.fehler || "Fehler " + r.status}).`; }
+  catch(e){ t = " Achtung: Die Benachrichtigungs-Mail ging nicht raus (keine Verbindung zum Server)."; }
+  const m = document.querySelector("#msg > div"); if (m && t){ m.textContent += t; if (t.includes("Achtung")) m.className = "err"; }
 }
 
 /* ---------- Entwurf automatisch sichern ----------
@@ -2024,6 +2040,6 @@ function kostenAusPdf(doc){
   if (nur==="kosten"){ krKasten.checked = true; krKasten.dispatchEvent(new Event("change")); weg(krKasten.closest("label")); }
 })();
 </script>
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.35 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.36 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
