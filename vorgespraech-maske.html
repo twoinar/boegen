@@ -1768,6 +1768,32 @@ function krWertAuswahl(){
   if (box.innerHTML !== neu) box.innerHTML = neu;
   if (document.activeElement !== betrag) betrag.value = gwFmt(krWertGewaehlt().w);
 }
+/* Erbfolge aus dem Erbspiegel für die Pflichtteilsverzichte im Rechner (Übertragung): je Übergeber – der als
+   Erblasser markierten Person und ihrem Ehegatten – nur die eigenen Kinder. Einseitige Kinder zählen also nur beim
+   jeweiligen Elternteil, gemeinsame bei beiden; ein vorverstorbenes Kind mit seinen Kindern als Stamm. */
+function krErbfolge(){
+  const a = typeof esApi === "function" ? esApi() : null; if (!a || a.leer()) return null;
+  let es; try{ es = a.daten().es; }catch(e){ return null; }
+  const P = id => es.p.find(p => p.id === id);
+  const kinderVon = id => { const ehen = new Set(es.e.filter(e => e.a === id || e.b === id).map(e => e.id));
+    return [...new Set(es.k.filter(k => (k.von.typ === "p" && k.von.id === id) || (k.von.typ === "e" && ehen.has(k.von.id))).map(k => k.kind))].map(P).filter(Boolean); };
+  const e0 = es.p.find(p => p.erblasser); if (!e0) return null;
+  const ehe = es.e.find(e => { if (e.geschieden || (e.a !== e0.id && e.b !== e0.id)) return false; const g = P(e.a === e0.id ? e.b : e.a); return g && g.status !== "vortot" && g.status !== "tot"; });
+  const gatte = ehe ? P(ehe.a === e0.id ? ehe.b : ehe.a) : null;
+  // Übernehmer: ein Kind, dessen Vor- und Nachname bei den Beteiligten (nicht Auftraggeber) steht
+  const bets = (typeof mkBets !== "undefined" ? mkBets : []).filter(b => !b.ag && (b.vorname || "").trim() && (b.name || "").trim());
+  const rolle = n => { const x = (n || "").toLowerCase(); return bets.some(b => x.includes(b.vorname.trim().toLowerCase()) && x.includes(b.name.trim().toLowerCase())) ? "uebernehmer" : "verzicht"; };
+  const baumVon = (person, mitGatte) => ({ ehegatte: !!mitGatte, stand: ehe && ehe.gs === "gt" ? "trennung" : "zugewinn",
+    kinder: kinderVon(person.id).map(k => { const tot = k.status === "vortot";
+      return { name: k.name || "", rolle: tot ? "keine" : rolle(k.name), tot,
+               enkel: tot ? kinderVon(k.id).filter(n => n.status !== "vortot").map(n => ({name: n.name || "", rolle: rolle(n.name)})) : [] }; }) });
+  const baum = {1: baumVon(e0, gatte)}; if (gatte) baum[2] = baumVon(gatte, e0);
+  const nameVon = p => p.name || "Erblasser", zahl = (b, wer) => `${nameVon(wer)}: ${b.kinder.length} Kind${b.kinder.length === 1 ? "" : "er"}`;
+  let einseitig = 0;
+  if (gatte){ const g = new Set(kinderVon(gatte.id).map(k => k.id)), e = new Set(kinderVon(e0.id).map(k => k.id));
+    einseitig = [...e].filter(x => !g.has(x)).length + [...g].filter(x => !e.has(x)).length; }
+  return { baum, zwei: !!gatte, text: `Erbfolge aus dem Erbspiegel (${zahl(baum[1], e0)}${gatte ? "; " + zahl(baum[2], gatte) : ""}${einseitig ? `; davon ${einseitig} einseitig` : ""})` };
+}
 function krParameter(reiter){
   const gew = krWertGewaehlt();
   const grund = gew ? gew.w : 0, grundText = gew ? gew.kurz + (krWertHand != null ? "" : " lt. Bedarfsbewertung") : "";
@@ -1787,6 +1813,8 @@ function krParameter(reiter){
       const mi = (typeof bbMitErgebnis === "function" ? bbMitErgebnis() : []).map(a => a.miete ? a.miete() : null).find(m => m && m.qm > 0 && m.wfl > 0);
       if (mi){ p.u_mwfl = mi.wfl; p.u_mqm = mi.qm; p.u_jwart = "miete";
         ueb.push(`für ein Wohnungsrecht: ${mi.wfl} m² Wohnfläche, Vergleichsmiete ${krEur(mi.qm)}/m²`); }
+      const ef = krErbfolge();
+      if (ef){ p.u_baum = JSON.stringify(ef.baum); p.u1_modus = "baum"; if (ef.zwei){ p.u2_modus = "baum"; if (zwei) p.u2_an = 1; } ueb.push(ef.text); }
       fehlt.push("Gegenleistungen und Pflichtteilsverzichte"); break; }
     case "scheidung":
       mitGrund("s_grund", "Grundbesitz");
@@ -2804,6 +2832,6 @@ mkLeeren(); mkBarHoehe(); mkOeffnen(1, false); geaendert = false;
 (async () => { await new Promise(r => setTimeout(r, 300)); mkPruefen(); })();
 </script>
 
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.9 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.10 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
