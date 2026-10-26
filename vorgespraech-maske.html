@@ -322,6 +322,7 @@ section.eingeklappt .klapp-info{display:block}
 .kr-werte legend{font-weight:600;padding:0 4px}
 .kr-werte #krWert label{display:flex;gap:6px;align-items:baseline;margin:2px 0;cursor:pointer}
 .kr-werte #krWert .betrag{margin-left:auto;font-variant-numeric:tabular-nums}
+.kr-obj{margin:2px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--line,#d5dbe3)} .kr-obj label{display:flex;gap:6px;align-items:baseline;margin:2px 0;cursor:pointer} .kr-obj .betrag{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--grau,#4a5568)} .kr-obj-titel{color:var(--grau,#4a5568);margin:2px 0}
 .kr-betrag{display:inline-block;margin-top:6px} .kr-werte small{margin-left:8px;color:var(--grau,#4a5568)}
 .kr-betrag input{font:inherit;background:var(--field);border:0;border-radius:2px;padding:5px 7px;text-align:right}
 .kr-leiste select{font:inherit;font-size:13px;color:var(--text);background:var(--field);border:0;border-radius:2px;padding:5px 7px}
@@ -1708,8 +1709,23 @@ function krVorschlag(){ const g = gegAuswahl().map(x=>KR_ZU[x]).filter(Boolean);
 /* Werte aus dem Bogen: Grundstückswert (Bedarfsbewertung), Vermögen, Nettoeinkommen, Auftraggeber */
 /* Alle Grundstückswerte aus der Bedarfsbewertung (alle Objekte zusammen) zur Auswahl */
 let krWertWahl = "", krWertHand = null;      // gewählter Wert; krWertHand: von Hand eingetragener Betrag
+/* Objekte der Bedarfsbewertung mit Ergebnis; jedes lässt sich für die Kostenberechnung abwählen (o.krAus) */
+function krObjekte(){ return (typeof bbObj !== "undefined" ? bbObj : []).map((o, i) => ({o, i, a: bbApiVon(o)})).filter(x => x.a && x.a.hatErgebnis()); }
+function krMitErgebnis(){ return krObjekte().filter(x => !x.o.krAus).map(x => x.a); }
+function krObjekteAnzeigen(){
+  const box = document.getElementById("krWert"); if (!box) return;
+  let d = document.getElementById("krObj");
+  if (!d){ d = document.createElement("div"); d.id = "krObj"; d.className = "kr-obj"; box.parentNode.insertBefore(d, box);
+    d.addEventListener("change", e => { const i = +e.target.dataset.obj, o = bbObj[i]; if (!o) return; o.krAus = !e.target.checked; krWertHand = null; geaendert = true; krWertAuswahl(); krLaden(); }); }
+  const X = krObjekte();
+  const neu = X.length > 1 ? `<div class="kr-obj-titel">Es gibt ${X.length} bewertete Objekte. Einbezogen werden:</div>` + X.map(({o, i, a}) => { const k = a.kopf ? a.kopf() : {}, w = a.werte ? a.werte() : {};
+      return `<label><input type="checkbox" data-obj="${i}"${o.krAus ? "" : " checked"}><span>Objekt ${i+1}${k.anschrift ? ": " + gwEsc(k.anschrift.split(",")[0]) : ""}</span><span class="betrag">Verkehrswert ${krEur(w.vw || 0)} · Grundbesitzwert ${krEur(w.gbw || 0)}</span></label>`; }).join("")
+    + `<div class="kr-obj-titel">Die Werte unten sind die Summe der einbezogenen Objekte.</div>` : "";
+  if (d.innerHTML !== neu) d.innerHTML = neu;
+  d.hidden = !neu;
+}
 function krWertListe(){
-  const objs = typeof bbMitErgebnis === "function" ? bbMitErgebnis().map(a => a.alleWerte ? a.alleWerte() : []) : [];
+  const objs = krMitErgebnis().map(a => a.alleWerte ? a.alleWerte() : []);
   if (!objs.length) return [];
   const namen = new Map(); objs.forEach(L => L.forEach(x => { if (!namen.has(x.k)) namen.set(x.k, x.n); }));
   return [...namen].map(([k, n]) => { let ersatz = 0;
@@ -1724,7 +1740,7 @@ function krWertListeMitMittel(){
 }
 /* Je Grundstück ein Wert (gewählte Wertart, sonst Verkehrswert) für „Grundstückswerte übernehmen“ im Rechner */
 function krGrundstuecke(){
-  const A = typeof bbMitErgebnis === "function" ? bbMitErgebnis() : [];
+  const A = krMitErgebnis();
   return A.map((a, i) => { const L = a.alleWerte ? a.alleWerte() : [], k = a.kopf ? a.kopf() : {};
     const f = key => (L.find(y=>y.k===key) || {}).w, vw = f("vw") || (L[0] || {}).w || 0;
     const w = krWertWahl === "mittel" && f("gbw") && vw ? Math.round((f("gbw") + vw) / 2) : (f(krWertWahl) || vw);
@@ -1743,7 +1759,7 @@ function krWertAuswahl(){
   const L = krWertListeMitMittel(), box = document.getElementById("krWert"), betrag = document.getElementById("krWertBetrag"); if (!box) return;
   try{ if (krFrame.getAttribute("src")) krGrundstueckeSenden();
        if (krFensterRef && !krFensterRef.closed) krGrundstueckeSenden(krFensterRef); }catch(e){}
-  document.getElementById("krWertBox").hidden = !L.length;
+  krObjekteAnzeigen(); document.getElementById("krWertBox").hidden = !krObjekte().length;
   if (!L.length){ box.innerHTML = ""; return; }
   if (!L.some(x=>x.k===krWertWahl)) krWertWahl = (L.find(x=>x.k==="vw") || L[0]).k;
   const hand = krWertHand != null;
@@ -2772,6 +2788,6 @@ mkLeeren(); mkBarHoehe(); mkOeffnen(1, false); geaendert = false;
 (async () => { await new Promise(r => setTimeout(r, 300)); mkPruefen(); })();
 </script>
 
-<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.7 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
+<p class="stand-version" style="font:12px/1.4 system-ui,sans-serif;color:#80868b;text-align:center;margin:24px 0 12px">Version 1.8 · Stand 26.10.2026</p><style>@media print{.stand-version{display:none}}</style>
 </body>
 </html>
