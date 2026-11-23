@@ -1407,7 +1407,7 @@ async function ausAufruf(){
   }
   for (const [u,v] of aufrufWeitere) wuEintragen(u, v);
   // Neuer PC oder anderer Browser: dort ist noch kein Ablageordner gespeichert (Fall WKS013, 23.11.2026)
-  if (!ordner) meldung(`UVZ-Nr. ${uvz} übernommen. Der Versand kann NICHT eingetragen werden: In diesem Browser auf diesem PC ist noch kein Ablageordner gewählt. Bitte „Ablageordner wählen“ klicken, den Ordner Y:\\Vorgänge\\Vollzugsbögen wählen und „Bei jedem Besuch zulassen“ bestätigen – dann wird der Versand sofort eingetragen.`, "err");
+  if (!ordner) meldung(`UVZ-Nr. ${uvz} übernommen. Der Versand kann NICHT eingetragen werden: In diesem Browser auf diesem PC ist noch kein Ablageordner gewählt. Bitte „Ablageordner wählen“ klicken, den Ordner wählen, in dem die Vollzugsbögen und die Versand-Dateien liegen, und „Bei jedem Besuch zulassen“ bestätigen – dann wird der Versand sofort eingetragen.`, "err");
   else meldung(`UVZ-Nr. ${uvz} übernommen. Der Versand wird eingetragen, sobald der Ablageordner freigegeben ist (einmal in den Bogen klicken bzw. „Ordnerzugriff erlauben“).`);
 }
 
